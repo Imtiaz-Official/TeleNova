@@ -397,7 +397,7 @@ app.post("/api/files/share", async (req, res) => {
         const token = Math.random().toString(36).substr(2, 12) + Math.random().toString(36).substr(2, 12);
         await sharesDb.insert({
             token,
-            messageId,
+            messageId: Number(messageId),
             name,
             userId: req.session.userId,
             sessionString: req.session.sessionString,

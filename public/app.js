@@ -3,7 +3,9 @@ const state = {
     currentPath: "root",
     items: [],
     viewMode: localStorage.getItem("telenova_view_mode") || "list",
-    selectedItem: null
+    selectedItem: null,
+    sortBy: 'name', // name, size, date
+    filterBy: 'all' // all, image, video, doc
 };
 
 // --- Modal System Logic ---
@@ -12,15 +14,37 @@ const modalTitle = document.getElementById("modal-title");
 const modalMessage = document.getElementById("modal-message");
 const modalInputContainer = document.getElementById("modal-input-container");
 const modalInput = document.getElementById("modal-input");
+const modalOptionsContainer = document.getElementById("modal-options");
 const modalCancel = document.getElementById("modal-cancel");
 const modalConfirm = document.getElementById("modal-confirm");
 
-function showModal({ title, message, showInput, confirmText, cancelText }) {
+function showModal({ title, message, showInput, options, selectedValue, confirmText, cancelText }) {
     return new Promise((resolve) => {
         modalTitle.innerText = title;
         modalMessage.innerText = message;
+        
         modalInputContainer.classList.toggle("hidden", !showInput);
+        modalOptionsContainer.classList.toggle("hidden", !options);
         modalInput.value = "";
+        
+        if (options) {
+            modalOptionsContainer.innerHTML = "";
+            options.forEach(opt => {
+                const div = document.createElement("div");
+                div.className = `modal-option-item ${selectedValue === opt.value ? 'active' : ''}`;
+                div.innerHTML = `<i data-lucide="${opt.icon || 'circle'}"></i> <span>${opt.label}</span>`;
+                div.onclick = () => {
+                    cleanup();
+                    resolve(opt.value);
+                };
+                modalOptionsContainer.appendChild(div);
+            });
+            if (window.lucide) lucide.createIcons();
+            modalConfirm.classList.add("hidden"); // Hide confirm if using options
+        } else {
+            modalConfirm.classList.remove("hidden");
+        }
+
         modalConfirm.innerText = confirmText || "Confirm";
         modalCancel.innerText = cancelText || "Cancel";
         modalOverlay.classList.remove("hidden");
@@ -206,19 +230,43 @@ document.querySelector(".search-bar").oninput = (e) => {
 function renderFiles(itemsToRender = state.items) {
     fileContainer.innerHTML = "";
     updateViewBtn();
-    updateStorageStats(itemsToRender);
+    
+    // Apply Filtering
+    let filteredItems = [...itemsToRender];
+    if (state.filterBy !== 'all') {
+        filteredItems = filteredItems.filter(item => {
+            if (item.type === 'folder') return true; // Always show folders
+            const cat = getFileCategory(item.name);
+            return cat === `clr-${state.filterBy}`;
+        });
+    }
+
+    // Apply Sorting
+    filteredItems.sort((a, b) => {
+        // Folders always come first
+        if (a.type === 'folder' && b.type !== 'folder') return -1;
+        if (a.type !== 'folder' && b.type === 'folder') return 1;
+
+        if (state.sortBy === 'name') return a.name.localeCompare(b.name);
+        if (state.sortBy === 'size') return (b.size || 0) - (a.size || 0);
+        if (state.sortBy === 'date') return new Date(b.createdAt) - new Date(a.createdAt);
+        return 0;
+    });
+
+    updateStorageStats(filteredItems);
 
     if (state.viewMode === "grid") {
         fileContainer.className = "file-grid";
-        itemsToRender.forEach((item, index) => {
+        filteredItems.forEach((item, index) => {
             const card = document.createElement("div");
             card.className = "item-card";
             card.style.animationDelay = `${index * 0.04}s`;
             
             const isImage = ['jpg', 'png', 'gif', 'jpeg', 'webp'].includes(item.name.split('.').pop().toLowerCase());
             const iconName = item.type === 'folder' ? 'folder' : getFileIcon(item.name);
+            const categoryClass = item.type === 'folder' ? 'clr-folder' : getFileCategory(item.name);
             
-            let iconHtml = `<span class="item-icon"><i data-lucide="${iconName}"></i></span>`;
+            let iconHtml = `<span class="item-icon ${categoryClass}"><i data-lucide="${iconName}"></i></span>`;
             if (isImage && item.messageId) {
                 iconHtml = `<div class="item-preview"><img src="/api/files/preview/${item.messageId}" alt="" loading="lazy"></div>`;
             }
@@ -250,7 +298,7 @@ function renderFiles(itemsToRender = state.items) {
         fileContainer.className = "file-list-view";
         const header = document.createElement("div");
         header.className = "list-header";
-        header.innerHTML = `<div>Name</div><div>Size</div><div>Type</div><div>ID</div><div></div>`;
+        header.innerHTML = `<div>Item Details</div><div style="text-align: right;">Size</div>`;
         fileContainer.appendChild(header);
 
         itemsToRender.forEach((item, index) => {
@@ -260,13 +308,14 @@ function renderFiles(itemsToRender = state.items) {
             
             const isImage = ['jpg', 'png', 'gif', 'jpeg', 'webp'].includes(item.name.split('.').pop().toLowerCase());
             const iconName = item.type === 'folder' ? 'folder' : getFileIcon(item.name);
+            const categoryClass = item.type === 'folder' ? 'clr-folder' : getFileCategory(item.name);
             
-            let iconHtml = `<span class="list-icon"><i data-lucide="${iconName}"></i></span>`;
+            let iconHtml = `<span class="list-icon ${categoryClass}"><i data-lucide="${iconName}"></i></span>`;
             if (isImage && item.messageId) {
                 iconHtml = `<div class="list-preview"><img src="/api/files/preview/${item.messageId}" alt="" loading="lazy"></div>`;
             }
 
-            const size = item.type === 'folder' ? '--' : formatBytes(item.size);
+            const size = formatBytes(item.size || 0);
             
             let displayType = 'FILE';
             if (item.type === 'folder') {
@@ -294,11 +343,16 @@ function renderFiles(itemsToRender = state.items) {
             }
 
             row.innerHTML = `
-                <div class="list-name">${iconHtml} <span>${item.name}</span></div>
-                <div>${size}</div>
-                <div>${displayType}</div>
-                <div style="font-size: 0.7rem; color: var(--text-secondary)">${item.messageId || 'DIR'}</div>
-                <div></div>
+                <div class="list-main">
+                    ${iconHtml}
+                    <div class="list-info">
+                        <span class="list-name">${item.name}</span>
+                        <span class="list-details">ID: ${item.messageId || 'DIR'} &bull; ${displayType}</span>
+                    </div>
+                </div>
+                <div class="list-meta">
+                    <span class="list-size">${size}</span>
+                </div>
             `;
             
             row.onclick = (e) => {
@@ -472,6 +526,21 @@ function getFileIcon(name) {
     return iconMap[ext] || 'file';
 }
 
+function getFileCategory(name) {
+    if (!name) return 'clr-default';
+    const ext = name.split('.').pop().toLowerCase();
+    
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'heic'].includes(ext)) return 'clr-image';
+    if (['mp4', 'mkv', 'mov', 'webm', 'avi', 'ts'].includes(ext)) return 'clr-video';
+    if (['mp3', 'wav', 'ogg', 'm4a', 'flac', 'opus'].includes(ext)) return 'clr-audio';
+    if (['pdf', 'doc', 'docx', 'txt', 'md', 'epub', 'ppt', 'pptx', 'xls', 'xlsx'].includes(ext)) return 'clr-doc';
+    if (['zip', 'rar', '7z', 'tar', 'gz', 'iso'].includes(ext)) return 'clr-archive';
+    if (['js', 'ts', 'py', 'java', 'cpp', 'c', 'go', 'html', 'css', 'json', 'rs', 'vue', 'xml'].includes(ext)) return 'clr-code';
+    if (['exe', 'msi', 'apk', 'dmg', 'bin', 'bat', 'cmd'].includes(ext)) return 'clr-code'; // Grouped with code for now
+    
+    return 'clr-default';
+}
+
 function formatBytes(bytes, decimals = 2) {
     if (bytes === 0) return '0 Bytes';
     if (!bytes || isNaN(bytes)) return 'Unknown Size';
@@ -506,6 +575,48 @@ function updateAuthStatus(text, type) {
 document.getElementById("init-btn").onclick = initializeSystem;
 document.getElementById("send-code-btn").onclick = sendCode;
 document.getElementById("login-btn").onclick = login;
+document.getElementById("sort-btn").onclick = async () => {
+    const sortValue = await showModal({
+        title: "Neural Sort Priority",
+        message: "Choose how you want to organize your nodes:",
+        selectedValue: state.sortBy,
+        options: [
+            { label: "Alphabetical (A-Z)", value: 'name', icon: 'type' },
+            { label: "Neural Size (Largest)", value: 'size', icon: 'database' },
+            { label: "Temporal Order (Newest)", value: 'date', icon: 'clock' }
+        ]
+    });
+
+    if (sortValue) {
+        state.sortBy = sortValue;
+        updateAuthStatus(`SORT_BY:_${sortValue.toUpperCase()}`, "READY");
+        renderFiles();
+    }
+};
+
+document.getElementById("filter-btn").onclick = async () => {
+    const filterValue = await showModal({
+        title: "Category Filter",
+        message: "Isolate specific data streams:",
+        selectedValue: state.filterBy,
+        options: [
+            { label: "All Data Streams", value: 'all', icon: 'layers' },
+            { label: "Visual (Images)", value: 'image', icon: 'image' },
+            { label: "Dynamic (Videos)", value: 'video', icon: 'video' },
+            { label: "Neural Code", value: 'code', icon: 'code' },
+            { label: "Documents", value: 'doc', icon: 'file-text' },
+            { label: "Audio Transmissions", value: 'audio', icon: 'music' },
+            { label: "Archives", value: 'archive', icon: 'archive' }
+        ]
+    });
+
+    if (filterValue) {
+        state.filterBy = filterValue;
+        updateAuthStatus(`FILTER_MODE:_${filterValue.toUpperCase()}`, "READY");
+        renderFiles();
+    }
+};
+
 document.getElementById("sync-btn").onclick = async () => {
     const btn = document.getElementById("sync-btn");
     const originalHtml = btn.innerHTML;

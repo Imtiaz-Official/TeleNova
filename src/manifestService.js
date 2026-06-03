@@ -27,39 +27,89 @@ class ManifestService {
             await this.db.folders.insert({ id: "root", name: "root", parentId: null });
         }
 
-        // Search for cloud manifest in Saved Messages (for cloud backup/sync)
-        const messages = await this.client.getMessages("me", {
+        // Try to load manifest from cloud (either new file-based or old text-based)
+        await this.loadCloudIndex();
+    }
+
+    async loadCloudIndex() {
+        // 1. Search for new file-based manifest
+        const fileMessages = await this.client.getMessages("me", {
+            search: "TELENOVA_MANIFEST_FILE_V1",
+            limit: 1
+        });
+
+        if (fileMessages.length > 0 && fileMessages[0].media) {
+            try {
+                this.manifestMessageId = fileMessages[0].id;
+                const buffer = await this.client.downloadMedia(fileMessages[0], {});
+                const data = JSON.parse(buffer.toString());
+                
+                await this.db.folders.remove({}, { multi: true });
+                await this.db.files.remove({}, { multi: true });
+                
+                if (data.folders) await this.db.folders.insert(data.folders);
+                if (data.files) await this.db.files.insert(data.files);
+                console.log("Manifest recovered from cloud file.");
+                return;
+            } catch (e) {
+                console.error("Failed to parse cloud manifest file:", e);
+            }
+        }
+
+        // 2. Fallback to old text-based manifest
+        const textMessages = await this.client.getMessages("me", {
             search: "TELENOVA_MANIFEST_V1",
             limit: 1
         });
 
-        if (messages.length > 0) {
-            this.manifestMessageId = messages[0].id;
+        if (textMessages.length > 0 && textMessages[0].text) {
+            try {
+                this.manifestMessageId = textMessages[0].id;
+                const text = textMessages[0].text;
+                if (text.includes("MANIFEST_DATA:")) {
+                    const dataStr = text.split("MANIFEST_DATA:")[1];
+                    const data = JSON.parse(dataStr);
+                    
+                    await this.db.folders.remove({}, { multi: true });
+                    await this.db.files.remove({}, { multi: true });
+
+                    if (data.folders) await this.db.folders.insert(data.folders);
+                    if (data.files) await this.db.files.insert(data.files);
+                    console.log("Manifest recovered from legacy text backup.");
+                }
+            } catch (e) {
+                console.error("Failed to parse legacy manifest:", e);
+            }
         }
     }
 
     async saveCloudBackup() {
-        // Prepare data for cloud backup
-        const folders = await this.db.folders.find({});
-        const files = await this.db.files.find({});
-        const data = { version: 1, folders, files };
-        
-        const manifestString = `TELENOVA_MANIFEST_V1\nMANIFEST_DATA:${JSON.stringify(data)}`;
-        
-        if (this.manifestMessageId) {
-            try {
-                await this.client.editMessage("me", {
-                    message: this.manifestMessageId,
-                    text: manifestString
-                });
-            } catch (e) {
-                // If message was deleted, send new one
-                const result = await this.client.sendMessage("me", { message: manifestString });
-                this.manifestMessageId = result.id;
+        try {
+            // Prepare data for cloud backup
+            const folders = await this.db.folders.find({});
+            const files = await this.db.files.find({});
+            const data = { version: 1, folders, files, timestamp: new Date() };
+            
+            const manifestBuffer = Buffer.from(JSON.stringify(data));
+            
+            // Send as a file to bypass message length limits
+            const result = await this.client.sendFile("me", {
+                file: manifestBuffer,
+                caption: "TELENOVA_MANIFEST_FILE_V1",
+                forceDocument: true,
+                attributes: [new Api.DocumentAttributeFilename({ fileName: "manifest.json" })]
+            });
+
+            // Delete old manifest if it exists
+            if (this.manifestMessageId) {
+                try {
+                    await this.client.deleteMessages("me", [this.manifestMessageId], { revoke: true });
+                } catch (e) { /* ignore */ }
             }
-        } else {
-            const result = await this.client.sendMessage("me", { message: manifestString });
+            
             this.manifestMessageId = result.id;
+        } catch (error) {
+            console.error("Cloud Backup Error:", error);
         }
     }
 
@@ -154,7 +204,55 @@ class ManifestService {
     async getFiles(folderId = "root") {
         const folders = await this.db.folders.find({ parentId: folderId });
         const files = await this.db.files.find({ folderId: folderId });
-        return { folders, files };
+
+        // Calculate sizes for each folder in the list
+        const foldersWithSizes = [];
+        for (const f of folders) {
+            try {
+                const totalSize = await this.getFolderSize(f.id);
+                // Create a clean object to avoid NeDB internal property issues
+                foldersWithSizes.push({
+                    id: f.id,
+                    name: f.name,
+                    parentId: f.parentId,
+                    createdAt: f.createdAt,
+                    size: totalSize,
+                    type: 'folder'
+                });
+            } catch (e) {
+                console.error(`Error sizing folder ${f.id}:`, e);
+                foldersWithSizes.push({ ...f, size: 0, type: 'folder' });
+            }
+        }
+
+        return { folders: foldersWithSizes, files };
+    }
+
+    async getFolderSize(folderId) {
+        let totalSize = 0;
+        
+        try {
+            // Sum files in this folder
+            const files = await this.db.files.find({ folderId });
+            if (files && files.length > 0) {
+                totalSize += files.reduce((acc, file) => {
+                    const s = Number(file.size);
+                    return acc + (isNaN(s) ? 0 : s);
+                }, 0);
+            }
+            
+            // Sum subfolders recursively
+            const subfolders = await this.db.folders.find({ parentId: folderId });
+            if (subfolders && subfolders.length > 0) {
+                for (const sub of subfolders) {
+                    totalSize += await this.getFolderSize(sub.id);
+                }
+            }
+        } catch (error) {
+            console.error("getFolderSize Error:", error);
+        }
+        
+        return totalSize;
     }
 
     async deleteItem(id, type) {
@@ -162,7 +260,6 @@ class ManifestService {
             await this.db.folders.remove({ id });
             await this.db.files.remove({ folderId: id }, { multi: true });
         } else {
-            // id here is messageId for files in our current logic
             await this.db.files.remove({ messageId: id });
         }
         await this.saveCloudBackup();

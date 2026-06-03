@@ -16,18 +16,33 @@ const authStatus = document.getElementById("auth-status");
 
 // --- Initialization & Session Check ---
 async function checkSession() {
+    // Hide UI by default until session is verified
+    document.querySelector(".sidebar").classList.add("hidden");
+    document.querySelector(".main-content").classList.add("hidden");
+    
     try {
         const res = await fetch("/api/files/list");
         if (res.ok) {
             const data = await res.json();
             state.isLoggedIn = true;
             authOverlay.classList.add("hidden");
+            document.querySelector(".sidebar").classList.remove("hidden");
+            document.querySelector(".main-content").classList.remove("hidden");
             state.items = data.items;
             renderFiles();
+        } else {
+            showLogin();
         }
     } catch (e) {
-        console.log("No active session found.");
+        showLogin();
     }
+}
+
+function showLogin() {
+    state.isLoggedIn = false;
+    authOverlay.classList.remove("hidden");
+    document.querySelector(".sidebar").classList.add("hidden");
+    document.querySelector(".main-content").classList.add("hidden");
 }
 
 // --- Auth Functions ---
@@ -87,6 +102,8 @@ async function login() {
         } else {
             state.isLoggedIn = true;
             authOverlay.classList.add("hidden");
+            document.querySelector(".sidebar").classList.remove("hidden");
+            document.querySelector(".main-content").classList.remove("hidden");
             loadFiles("root");
         }
     } else {

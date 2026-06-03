@@ -65,43 +65,60 @@
     <!-- Auth Overlay -->
     <div id="auth-overlay" class="auth-overlay">
         <div class="auth-card">
-            <h2 style="margin-bottom: 8px; text-align: center;">Uplink Required</h2>
-            <p style="color: var(--text-secondary); text-align: center; margin-bottom: 24px; font-size: 0.9rem;">CONNECT_TO_TELENOVA_NEURAL_NETWORK</p>
+            <div class="auth-header">
+                <div class="auth-logo">
+                    TELE<span>NOVA</span>
+                </div>
+                <h2>Neural Uplink</h2>
+                <p>Connect to the Telegram cloud network</p>
+            </div>
+
+            <div class="auth-progress">
+                <div class="progress-step active" id="p-step-1">1</div>
+                <div class="progress-line"></div>
+                <div class="progress-step" id="p-step-2">2</div>
+                <div class="progress-line"></div>
+                <div class="progress-step" id="p-step-3">3</div>
+            </div>
             
             <div id="step-init" class="auth-step">
                 <div class="auth-input-group">
-                    <label style="font-size: 0.75rem; font-weight: 600;">TELEGRAM_API_ID</label>
-                    <input type="text" id="api-id-input" placeholder="e.g. 1234567" class="auth-input">
+                    <label>Telegram API ID</label>
+                    <input type="text" id="api-id-input" placeholder="Get from my.telegram.org" class="auth-input">
+                    <span class="input-hint">Your unique application ID</span>
                 </div>
                 <div class="auth-input-group">
-                    <label style="font-size: 0.75rem; font-weight: 600;">TELEGRAM_API_HASH</label>
-                    <input type="text" id="api-hash-input" placeholder="e.g. abc123def..." class="auth-input">
+                    <label>Telegram API Hash</label>
+                    <input type="text" id="api-hash-input" placeholder="Your secret API hash" class="auth-input">
+                    <span class="input-hint">Used to secure your connection</span>
                 </div>
-                <button id="init-btn" class="btn btn-primary" style="width: 100%; justify-content: center;">INITIALIZE_SYSTEM</button>
+                <button id="init-btn" class="btn btn-primary btn-block">Initialize Setup</button>
             </div>
 
             <div id="step-phone" class="auth-step hidden">
                 <div class="auth-input-group">
-                    <label style="font-size: 0.75rem; font-weight: 600;">PHONE_NUMBER</label>
+                    <label>Phone Number</label>
                     <input type="text" id="phone-input" placeholder="+1234567890" class="auth-input">
+                    <span class="input-hint">Include country code (e.g., +1 for US)</span>
                 </div>
-                <button id="send-code-btn" class="btn btn-primary" style="width: 100%; justify-content: center;">REQUEST_OTP</button>
+                <button id="send-code-btn" class="btn btn-primary btn-block">Request Access Code</button>
             </div>
 
             <div id="step-verify" class="auth-step hidden">
                 <div class="auth-input-group">
-                    <label style="font-size: 0.75rem; font-weight: 600;">VERIFICATION_CODE</label>
-                    <input type="text" id="code-input" placeholder="00000" class="auth-input">
+                    <label>Verification Code</label>
+                    <input type="text" id="code-input" placeholder="Check your Telegram app" class="auth-input">
                 </div>
                 <div class="auth-input-group">
-                    <label style="font-size: 0.75rem; font-weight: 600;">2FA_PASSWORD [SECURE_LAYER]</label>
-                    <input type="password" id="password-input" placeholder="********" class="auth-input">
+                    <label>Two-Factor Password</label>
+                    <input type="password" id="password-input" placeholder="Only if 2FA is enabled" class="auth-input">
+                    <span class="input-hint">Your private security layer</span>
                 </div>
-                <button id="login-btn" class="btn btn-primary" style="width: 100%; justify-content: center;">ESTABLISH_UPLINK</button>
+                <button id="login-btn" class="btn btn-primary btn-block">Establish Uplink</button>
             </div>
 
-            <div id="auth-status" style="margin-top: 20px; text-align: center; font-size: 0.8rem; color: var(--accent);" class="status-pulse">
-                SYSTEM_STANDBY
+            <div id="auth-status" class="auth-status">
+                READY_FOR_SYNC
             </div>
         </div>
     </div>

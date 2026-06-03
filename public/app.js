@@ -61,6 +61,7 @@ async function initializeSystem() {
     if (res.ok) {
         document.getElementById("step-init").classList.add("hidden");
         document.getElementById("step-phone").classList.remove("hidden");
+        updateProgress(2);
         updateAuthStatus("SYSTEM_INITIALIZED", "READY");
     }
 }
@@ -79,8 +80,28 @@ async function sendCode() {
     if (res.ok) {
         document.getElementById("step-phone").classList.add("hidden");
         document.getElementById("step-verify").classList.remove("hidden");
+        updateProgress(3);
         updateAuthStatus("CODE_SENT", "READY");
     }
+}
+
+function updateProgress(step) {
+    for (let i = 1; i <= 3; i++) {
+        const el = document.getElementById(`p-step-${i}`);
+        if (i < step) {
+            el.classList.add("complete");
+            el.classList.remove("active");
+            el.innerHTML = '<i data-lucide="check" style="width: 16px; height: 16px;"></i>';
+        } else if (i === step) {
+            el.classList.add("active");
+            el.classList.remove("complete");
+            el.innerText = i;
+        } else {
+            el.classList.remove("active", "complete");
+            el.innerText = i;
+        }
+    }
+    if (window.lucide) lucide.createIcons();
 }
 
 async function login() {

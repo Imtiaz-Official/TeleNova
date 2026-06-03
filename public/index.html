@@ -28,6 +28,17 @@
                 <i data-lucide="log-out"></i> Logout
             </div>
         </nav>
+
+        <div class="storage-widget">
+            <div class="storage-info">
+                <span>Neural Storage</span>
+                <span id="storage-percentage">0%</span>
+            </div>
+            <div class="storage-bar">
+                <div class="storage-progress" id="storage-progress"></div>
+            </div>
+            <p class="storage-detail">Using <span id="storage-used">0 B</span> of Unlimited</p>
+        </div>
     </aside>
 
     <!-- Main Content -->
@@ -35,6 +46,7 @@
         <header class="toolbar">
             <input type="text" class="search-bar" placeholder="Search your files...">
             <div class="actions">
+                <button class="btn btn-outline" id="remote-save-btn"><i data-lucide="link-2"></i> <span>Remote Save</span></button>
                 <button class="btn btn-outline" id="sync-btn"><i data-lucide="refresh-cw"></i> <span>Sync TG</span></button>
                 <button class="btn btn-outline" id="view-toggle-btn"><i data-lucide="layout-grid"></i> <span>Grid View</span></button>
                 <button class="btn btn-outline" id="new-folder-btn"><i data-lucide="folder-plus"></i> <span>New Folder</span></button>
@@ -58,6 +70,7 @@
     <!-- Context Menu -->
     <div id="context-menu" class="context-menu hidden">
         <div class="menu-item" id="menu-download"><i data-lucide="download"></i> Download</div>
+        <div class="menu-item" id="menu-share"><i data-lucide="share-2"></i> Share Link</div>
         <div class="menu-item" id="menu-open"><i data-lucide="external-link"></i> Open</div>
         <div class="menu-item delete" id="menu-delete"><i data-lucide="trash-2"></i> Delete</div>
     </div>

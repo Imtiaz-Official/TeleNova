@@ -10,9 +10,13 @@ const fs = require("fs");
 require("dotenv").config();
 
 const ManifestService = require("./manifestService");
+const Datastore = require("nedb-promises");
 
 const app = express();
 const upload = multer({ dest: "uploads/" });
+
+// Share Link Database
+const sharesDb = Datastore.create({ filename: path.join(process.cwd(), "data", "shares.db"), autoload: true });
 
 // Essential for tunnels (Cloudflare, Ngrok, etc.) and reverse proxies
 app.set("trust proxy", 1);
@@ -326,7 +330,106 @@ app.get("/api/files/preview/:messageId", async (req, res) => {
     }
 });
 
+app.post("/api/files/save-from-link", async (req, res) => {
+    if (!req.session.isLoggedIn) return res.status(401).json({ error: "Unauthorized" });
+    const { link, folderId } = req.body;
+
+    try {
+        const { client, manifest } = await getClientContext(req.sessionID, req.session.sessionString, req.session);
+        
+        // Basic link parsing
+        // Expected formats: https://t.me/c/12345/678 or https://t.me/username/678
+        const parts = link.split("/");
+        const messageId = parseInt(parts.pop());
+        let peer = parts.pop();
+
+        if (peer === "c") {
+            // Private channel link format: /c/CHANNEL_ID/MSG_ID
+            peer = parts.pop();
+            // Prefix with -100 for Telegram internal ID format if it's purely numeric
+            if (/^\d+$/.test(peer)) peer = "-100" + peer;
+        }
+
+        // Forward the message to "me"
+        const result = await client.forwardMessages("me", {
+            messages: [messageId],
+            fromPeer: peer
+        });
+
+        const msg = result[0];
+        if (!msg || !msg.media) throw new Error("No media found in this link");
+
+        let fileName = `Saved_File_${msg.id}`;
+        let fileSize = 0;
+
+        if (msg.file) {
+            fileName = msg.file.name || fileName;
+            fileSize = msg.file.size || 0;
+        }
+
+        await manifest.addFile(fileName, msg.id, folderId || "root", fileSize);
+
+        res.json({ success: true, fileName });
+    } catch (error) {
+        console.error("Save From Link Error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post("/api/files/share", async (req, res) => {
+    if (!req.session.isLoggedIn) return res.status(401).json({ error: "Unauthorized" });
+    const { messageId, name } = req.body;
+
+    try {
+        const token = Math.random().toString(36).substr(2, 12) + Math.random().toString(36).substr(2, 12);
+        await sharesDb.insert({
+            token,
+            messageId,
+            name,
+            userId: req.session.userId,
+            sessionString: req.session.sessionString,
+            apiId: req.session.apiId,
+            apiHash: req.session.apiHash,
+            createdAt: new Date()
+        });
+
+        const shareUrl = `${req.protocol}://${req.get('host')}/api/public/download/${token}`;
+        res.json({ success: true, shareUrl });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get("/api/public/download/:token", async (req, res) => {
+    const { token } = req.params;
+
+    try {
+        const share = await sharesDb.findOne({ token });
+        if (!share) return res.status(404).send("Link expired or invalid");
+
+        const client = new TelegramClient(new StringSession(share.sessionString), share.apiId, share.apiHash, {
+            connectionRetries: 5,
+        });
+        await client.connect();
+
+        const messages = await client.getMessages("me", { ids: [parseInt(share.messageId)] });
+        if (!messages || messages.length === 0) throw new Error("File not found");
+        
+        const msg = messages[0];
+        const buffer = await client.downloadMedia(msg, {});
+        
+        const fileName = share.name || "file";
+        res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+        res.send(buffer);
+        
+        await client.disconnect();
+    } catch (error) {
+        res.status(500).send("Error downloading file: " + error.message);
+    }
+});
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`TeleNova Server running on http://localhost:${PORT}`);
+    console.log(`Network Access: http://0.0.0.0:${PORT}`);
 });

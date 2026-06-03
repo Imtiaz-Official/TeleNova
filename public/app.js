@@ -206,13 +206,14 @@ document.querySelector(".search-bar").oninput = (e) => {
 function renderFiles(itemsToRender = state.items) {
     fileContainer.innerHTML = "";
     updateViewBtn();
+    updateStorageStats(itemsToRender);
 
     if (state.viewMode === "grid") {
         fileContainer.className = "file-grid";
         itemsToRender.forEach((item, index) => {
             const card = document.createElement("div");
             card.className = "item-card";
-            card.style.animationDelay = `${index * 0.03}s`;
+            card.style.animationDelay = `${index * 0.04}s`;
             
             const isImage = ['jpg', 'png', 'gif', 'jpeg', 'webp'].includes(item.name.split('.').pop().toLowerCase());
             const iconName = item.type === 'folder' ? 'folder' : getFileIcon(item.name);
@@ -223,9 +224,19 @@ function renderFiles(itemsToRender = state.items) {
             }
             
             card.innerHTML = `
+                <div class="hover-glow"></div>
                 ${iconHtml}
                 <span class="item-name">${item.name}</span>
             `;
+
+            // Mouse tracking for hover glow
+            card.onmousemove = (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                card.style.setProperty('--mouse-x', `${x}px`);
+                card.style.setProperty('--mouse-y', `${y}px`);
+            };
             
             card.onclick = (e) => {
                 handleItemClick(e, item);
@@ -240,9 +251,10 @@ function renderFiles(itemsToRender = state.items) {
         header.innerHTML = `<div>Name</div><div>Size</div><div>Type</div><div>ID</div><div></div>`;
         fileContainer.appendChild(header);
 
-        itemsToRender.forEach(item => {
+        itemsToRender.forEach((item, index) => {
             const row = document.createElement("div");
             row.className = "list-item";
+            row.style.animationDelay = `${index * 0.02}s`;
             
             const isImage = ['jpg', 'png', 'gif', 'jpeg', 'webp'].includes(item.name.split('.').pop().toLowerCase());
             const iconName = item.type === 'folder' ? 'folder' : getFileIcon(item.name);
@@ -328,13 +340,39 @@ function handleContextMenu(e, item) {
     contextMenu.style.left = `${x}px`;
     
     document.getElementById("menu-download").classList.toggle("hidden", item.type === 'folder');
+    document.getElementById("menu-share").classList.toggle("hidden", item.type === 'folder');
     document.getElementById("menu-open").classList.toggle("hidden", item.type !== 'folder');
 }
 
 document.onclick = () => contextMenu.classList.add("hidden");
+window.onscroll = () => contextMenu.classList.add("hidden");
+document.addEventListener('scroll', () => contextMenu.classList.add("hidden"), true);
 
 document.getElementById("menu-download").onclick = () => {
     if (state.selectedItem) downloadFile(state.selectedItem.messageId, state.selectedItem.name);
+};
+
+document.getElementById("menu-share").onclick = async () => {
+    if (!state.selectedItem) return;
+    
+    updateAuthStatus("GENERATING_SHARE_TOKEN...", "PROCESS");
+    const res = await fetch("/api/files/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messageId: state.selectedItem.messageId, name: state.selectedItem.name })
+    });
+
+    if (res.ok) {
+        const data = await res.json();
+        updateAuthStatus("SHARE_LINK_READY", "READY");
+        showModal({
+            title: "Neural Share Link",
+            message: `Public download link generated:\n\n${data.shareUrl}`,
+            confirmText: "Close"
+        });
+    } else {
+        updateAuthStatus("SHARE_FAILED", "ERROR");
+    }
 };
 
 document.getElementById("menu-open").onclick = () => {
@@ -438,18 +476,50 @@ document.getElementById("init-btn").onclick = initializeSystem;
 document.getElementById("send-code-btn").onclick = sendCode;
 document.getElementById("login-btn").onclick = login;
 document.getElementById("sync-btn").onclick = async () => {
-    const btn = document.getElementById("sync-btn");
-    btn.innerHTML = `<i data-lucide="loader-2" class="status-pulse"></i> <span>Syncing...</span>`;
-    lucide.createIcons();
+    updateAuthStatus("SYNCING_CLOUD_INDEX...", "PROCESS");
     const res = await fetch("/api/files/sync", { method: "POST" });
     const data = await res.json();
     if (data.success) {
-        alert(`Sync Complete: ${data.addedCount} items added.`);
+        updateAuthStatus(`SYNC_COMPLETE:_${data.addedCount}_NEW_ITEMS`, "READY");
         loadFiles(state.currentPath);
+    } else {
+        updateAuthStatus("SYNC_FAILED", "ERROR");
     }
-    btn.innerHTML = `<i data-lucide="refresh-cw"></i> <span>Sync TG</span>`;
-    lucide.createIcons();
+    if (window.lucide) lucide.createIcons();
 };
+
+document.getElementById("remote-save-btn").onclick = async () => {
+    const link = await showModal({
+        title: "Remote Neural Save",
+        message: "Paste a Telegram message link to save it directly to your drive:",
+        showInput: true,
+        confirmText: "Save to Drive"
+    });
+
+    if (!link) return;
+
+    updateAuthStatus("FETCHING_REMOTE_NODE...", "PROCESS");
+    try {
+        const res = await fetch("/api/files/save-from-link", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ link, folderId: state.currentPath })
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            updateAuthStatus(`SAVED:_${data.fileName.toUpperCase()}`, "READY");
+            loadFiles(state.currentPath);
+        } else {
+            const err = await res.json();
+            updateAuthStatus("REMOTE_SAVE_FAILED", "ERROR");
+            showModal({ title: "Fetch Error", message: err.error || "Could not retrieve the file from this link." });
+        }
+    } catch (e) {
+        updateAuthStatus("NETWORK_ERROR", "ERROR");
+    }
+};
+
 document.getElementById("new-folder-btn").onclick = async () => {
     const name = await showModal({
         title: "New Neural Node",
@@ -477,6 +547,22 @@ document.getElementById("file-upload").onchange = async (e) => {
     if (res.ok) loadFiles(state.currentPath);
 };
 document.getElementById("logout-btn").onclick = () => location.reload();
+
+function updateStorageStats(items) {
+    const totalSize = items.reduce((acc, item) => acc + (item.size || 0), 0);
+    const usedText = document.getElementById("storage-used");
+    const progress = document.getElementById("storage-progress");
+    const percentageText = document.getElementById("storage-percentage");
+
+    if (usedText && progress && percentageText) {
+        usedText.innerText = formatBytes(totalSize);
+        // Using an arbitrary 10GB as a "Neural Capacity" limit for visual effect
+        const limit = 10 * 1024 * 1024 * 1024; 
+        const percentage = Math.min(100, Math.round((totalSize / limit) * 100));
+        progress.style.width = `${percentage}%`;
+        percentageText.innerText = `${percentage}%`;
+    }
+}
 
 // Initial Run
 checkSession();

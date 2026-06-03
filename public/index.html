@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TeleNova | Neural Storage</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="brand">
+            TELE<span>NOVA</span>
+        </div>
+        <nav class="nav-group">
+            <div class="nav-item active" onclick="loadFiles('root')">
+                <i data-lucide="folder"></i> All Files
+            </div>
+            <div class="nav-item">
+                <i data-lucide="star"></i> Starred
+            </div>
+            <div class="nav-item">
+                <i data-lucide="clock"></i> Recent
+            </div>
+            <div class="nav-item" id="logout-btn">
+                <i data-lucide="log-out"></i> Logout
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="toolbar">
+            <input type="text" class="search-bar" placeholder="Search your files...">
+            <div class="actions">
+                <button class="btn btn-outline" id="sync-btn"><i data-lucide="refresh-cw"></i> <span>Sync TG</span></button>
+                <button class="btn btn-outline" id="view-toggle-btn"><i data-lucide="layout-grid"></i> <span>Grid View</span></button>
+                <button class="btn btn-outline" id="new-folder-btn"><i data-lucide="folder-plus"></i> <span>New Folder</span></button>
+                <label for="file-upload" class="btn btn-primary"><i data-lucide="upload-cloud"></i> <span>Upload</span></label>
+                <input type="file" id="file-upload" class="hidden">
+            </div>
+        </header>
+
+        <div class="explorer-header">
+            <div class="breadcrumbs" id="breadcrumbs">
+                <span>My Drive</span>
+            </div>
+        </div>
+
+        <!-- File List Container (Dynamic Grid or List) -->
+        <div id="file-container" class="file-grid">
+            <!-- Items injected here -->
+        </div>
+    </main>
+
+    <!-- Context Menu -->
+    <div id="context-menu" class="context-menu hidden">
+        <div class="menu-item" id="menu-download"><i data-lucide="download"></i> Download</div>
+        <div class="menu-item" id="menu-open"><i data-lucide="external-link"></i> Open</div>
+        <div class="menu-item delete" id="menu-delete"><i data-lucide="trash-2"></i> Delete</div>
+    </div>
+
+    <!-- Auth Overlay -->
+    <div id="auth-overlay" class="auth-overlay">
+        <div class="auth-card">
+            <h2 style="margin-bottom: 8px; text-align: center;">Uplink Required</h2>
+            <p style="color: var(--text-secondary); text-align: center; margin-bottom: 24px; font-size: 0.9rem;">CONNECT_TO_TELENOVA_NEURAL_NETWORK</p>
+            
+            <div id="step-init" class="auth-step">
+                <div class="auth-input-group">
+                    <label style="font-size: 0.75rem; font-weight: 600;">TELEGRAM_API_ID</label>
+                    <input type="text" id="api-id-input" placeholder="e.g. 1234567" class="auth-input">
+                </div>
+                <div class="auth-input-group">
+                    <label style="font-size: 0.75rem; font-weight: 600;">TELEGRAM_API_HASH</label>
+                    <input type="text" id="api-hash-input" placeholder="e.g. abc123def..." class="auth-input">
+                </div>
+                <button id="init-btn" class="btn btn-primary" style="width: 100%; justify-content: center;">INITIALIZE_SYSTEM</button>
+            </div>
+
+            <div id="step-phone" class="auth-step hidden">
+                <div class="auth-input-group">
+                    <label style="font-size: 0.75rem; font-weight: 600;">PHONE_NUMBER</label>
+                    <input type="text" id="phone-input" placeholder="+1234567890" class="auth-input">
+                </div>
+                <button id="send-code-btn" class="btn btn-primary" style="width: 100%; justify-content: center;">REQUEST_OTP</button>
+            </div>
+
+            <div id="step-verify" class="auth-step hidden">
+                <div class="auth-input-group">
+                    <label style="font-size: 0.75rem; font-weight: 600;">VERIFICATION_CODE</label>
+                    <input type="text" id="code-input" placeholder="00000" class="auth-input">
+                </div>
+                <div class="auth-input-group">
+                    <label style="font-size: 0.75rem; font-weight: 600;">2FA_PASSWORD [SECURE_LAYER]</label>
+                    <input type="password" id="password-input" placeholder="********" class="auth-input">
+                </div>
+                <button id="login-btn" class="btn btn-primary" style="width: 100%; justify-content: center;">ESTABLISH_UPLINK</button>
+            </div>
+
+            <div id="auth-status" style="margin-top: 20px; text-align: center; font-size: 0.8rem; color: var(--accent);" class="status-pulse">
+                SYSTEM_STANDBY
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

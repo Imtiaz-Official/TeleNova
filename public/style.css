@@ -366,44 +366,70 @@ body {
     opacity: 0.8;
 }
 
-.btn-block { width: 100%; justify-content: center; padding: 16px; }
+.btn-block { 
+    width: 100%; 
+    justify-content: center; 
+    padding: 18px; 
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-size: 0.8rem;
+}
 
 .auth-status {
     text-align: center;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 700;
     color: var(--accent);
-    letter-spacing: 2px;
+    letter-spacing: 3px;
     text-transform: uppercase;
-    opacity: 0.6;
+    opacity: 0.5;
+    margin-top: 8px;
 }
 
 /* --- Buttons --- */
 
 .btn {
-    padding: 12px 24px;
-    border-radius: 16px;
+    padding: 12px 28px;
+    border-radius: 18px;
     font-size: 0.9rem;
     font-weight: 700;
     letter-spacing: 0.5px;
+    border: 1px solid transparent;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
 }
 
 .btn-primary {
     background: linear-gradient(135deg, var(--accent) 0%, #4a66f5 100%);
+    color: white;
+    box-shadow: 0 10px 20px rgba(92, 120, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .btn-primary:hover {
-    animation: pulseGlow 2s infinite;
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 15px 30px rgba(92, 120, 255, 0.3);
+    background: linear-gradient(135deg, #6e88ff 0%, #5c78ff 100%);
+}
+
+.btn-primary:active {
+    transform: translateY(-1px) scale(0.98);
 }
 
 .btn-outline {
-    background: transparent;
+    background: rgba(255, 255, 255, 0.03);
     border: 1px solid var(--border);
+    color: var(--text-primary);
 }
 
 .btn-outline:hover {
+    background: rgba(255, 255, 255, 0.08);
     border-color: var(--accent);
     color: var(--accent);
+    transform: translateY(-2px);
 }
 
 /* --- Responsive --- */

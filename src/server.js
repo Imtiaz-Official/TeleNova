@@ -441,6 +441,24 @@ app.get("/api/public/download/:token", async (req, res) => {
     }
 });
 
+app.get("/api/files/stats", async (req, res) => {
+    if (!req.session.isLoggedIn) return res.status(401).json({ error: "Unauthorized" });
+
+    try {
+        const { manifest } = await getClientContext(req.sessionID, req.session.sessionString, req.session);
+        const { folders, files } = await manifest.getAllItems();
+
+        res.json({
+            items: [
+                ...folders.map(f => ({ ...f, type: "folder" })),
+                ...files.map(f => ({ ...f, type: "file" }))
+            ]
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`TeleNova Server running on http://localhost:${PORT}`);

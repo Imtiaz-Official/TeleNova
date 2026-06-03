@@ -75,6 +75,13 @@ const viewToggleBtn = document.getElementById("view-toggle-btn");
 const contextMenu = document.getElementById("context-menu");
 const authStatus = document.getElementById("auth-status");
 
+const dashboardView = document.getElementById("dashboard-view");
+const explorerView = document.getElementById("explorer-view");
+const recentContainer = document.getElementById("recent-container");
+
+const navHome = document.getElementById("nav-home");
+const navFiles = document.getElementById("nav-files");
+
 // --- Initialization & Session Check ---
 async function checkSession() {
     try {
@@ -86,7 +93,7 @@ async function checkSession() {
                 authOverlay.classList.add("hidden");
                 document.querySelector(".sidebar").classList.remove("hidden");
                 document.querySelector(".main-content").classList.remove("hidden");
-                loadFiles("root");
+                showView('home');
             } else if (data.hasConfig) {
                 // System configured but not logged in, show phone step
                 document.getElementById("step-init").classList.add("hidden");
@@ -101,9 +108,98 @@ async function checkSession() {
         }
     } catch (e) {
         console.error("Session check failed:", e);
-        // On fatal error, show login as fallback
         showLogin();
     }
+}
+
+function showView(view) {
+    if (view === 'home') {
+        dashboardView.classList.remove("hidden");
+        explorerView.classList.add("hidden");
+        navHome.classList.add("active");
+        navFiles.classList.remove("active");
+        loadDashboard();
+    } else {
+        dashboardView.classList.add("hidden");
+        explorerView.classList.remove("hidden");
+        navHome.classList.remove("active");
+        navFiles.classList.add("active");
+    }
+}
+
+async function loadDashboard() {
+    updateAuthStatus("FETCHING_NEURAL_STATS...", "PROCESS");
+    // Fetch ALL items across all folders for true global stats
+    const res = await fetch("/api/files/stats");
+    if (res.ok) {
+        const data = await res.json();
+        
+        let totalFiles = 0;
+        let totalFolders = 0;
+        let totalSize = 0;
+        
+        data.items.forEach(item => {
+            if (item.type === 'folder') {
+                if (item.id !== 'root') totalFolders++;
+            } else {
+                totalFiles++;
+                totalSize += (item.size || 0);
+            }
+        });
+        
+        document.getElementById("dash-storage").innerText = formatBytes(totalSize);
+        document.getElementById("dash-files-count").innerText = totalFiles;
+        document.getElementById("dash-folders-count").innerText = totalFolders;
+        
+        // Update Sidebar Storage Widget too
+        updateStorageStats(data.items);
+
+        // Render Recent Activity (Last 6 files across entire drive)
+        const sortedRecent = data.items
+            .filter(i => i.type !== 'folder')
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            .slice(0, 6);
+            
+        renderRecent(sortedRecent);
+        updateAuthStatus("DASHBOARD_READY", "READY");
+    }
+}
+
+function renderRecent(items) {
+    recentContainer.innerHTML = "";
+    if (items.length === 0) {
+        recentContainer.innerHTML = `<div style="padding: 40px; color: var(--text-secondary); text-align: center; width: 100%;">No recent neural activity detected.</div>`;
+        return;
+    }
+
+    items.forEach((item, index) => {
+        const card = document.createElement("div");
+        card.className = "item-card";
+        card.style.animationDelay = `${index * 0.05}s`;
+        
+        const isImage = ['jpg', 'png', 'gif', 'jpeg', 'webp'].includes(item.name.split('.').pop().toLowerCase());
+        const iconName = getFileIcon(item.name);
+        const categoryClass = getFileCategory(item.name);
+        
+        let iconHtml = `<span class="item-icon ${categoryClass}"><i data-lucide="${iconName}"></i></span>`;
+        if (isImage && item.messageId) {
+            iconHtml = `<div class="item-preview"><img src="/api/files/preview/${item.messageId}" alt="" loading="lazy"></div>`;
+        }
+        
+        card.innerHTML = `
+            <div class="hover-glow"></div>
+            ${iconHtml}
+            <span class="item-name">${item.name}</span>
+        `;
+        
+        card.onclick = () => {
+            state.selectedItem = item;
+            downloadFile(item.messageId, item.name);
+        };
+        
+        recentContainer.appendChild(card);
+    });
+    if (window.lucide) lucide.createIcons();
 }
 
 function showLogin() {
@@ -206,16 +302,16 @@ async function loadFiles(folderId = "root") {
     state.currentPath = folderId;
     updateAuthStatus(`LOADING_NODE_${folderId.toUpperCase()}...`, "PROCESS");
     try {
-        const res = await fetch(`/api/files?folderId=${folderId}`);
-        // Fallback for previous API structure
-        const endpoint = res.ok ? `/api/files?folderId=${folderId}` : `/api/files/list?folderId=${folderId}`;
-        const finalRes = await fetch(endpoint);
-        const data = await finalRes.json();
+        const res = await fetch(`/api/files/list?folderId=${folderId}`);
+        if (!res.ok) throw new Error("Server response error");
+        
+        const data = await res.json();
         state.items = data.items;
         renderFiles();
         updateBreadcrumbs(folderId);
         updateAuthStatus("SYSTEM_READY", "READY");
     } catch (e) {
+        console.error("VFS Error:", e);
         updateAuthStatus("VFS_IO_ERROR", "ERROR");
     }
 }
@@ -572,6 +668,12 @@ function updateAuthStatus(text, type) {
 }
 
 // --- Event Listeners ---
+navHome.onclick = () => showView('home');
+navFiles.onclick = () => {
+    showView('explorer');
+    loadFiles('root');
+};
+
 document.getElementById("init-btn").onclick = initializeSystem;
 document.getElementById("send-code-btn").onclick = sendCode;
 document.getElementById("login-btn").onclick = login;

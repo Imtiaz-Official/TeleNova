@@ -228,6 +228,12 @@ class ManifestService {
         return { folders: foldersWithSizes, files };
     }
 
+    async getAllItems() {
+        const folders = await this.db.folders.find({});
+        const files = await this.db.files.find({});
+        return { folders, files };
+    }
+
     async getFolderSize(folderId) {
         let totalSize = 0;
         

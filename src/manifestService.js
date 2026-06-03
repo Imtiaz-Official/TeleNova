@@ -68,17 +68,41 @@ class ManifestService {
         let addedCount = 0;
 
         for (const msg of messages) {
-            if (msg.media && (msg.media.document || msg.media.video || msg.media.photo)) {
+            // Comprehensive check for media types
+            const hasMedia = msg.media && (
+                msg.media instanceof Api.MessageMediaDocument ||
+                msg.media instanceof Api.MessageMediaPhoto ||
+                msg.media instanceof Api.MessageMediaWebPage ||
+                msg.media.document || 
+                msg.media.video || 
+                msg.media.photo
+            );
+
+            if (hasMedia) {
                 if (msg.id === this.manifestMessageId) continue;
                 
+                // Check database by messageId
                 const exists = await this.db.files.findOne({ messageId: msg.id });
                 if (!exists) {
-                    let fileName = "Telegram_File_" + msg.id;
+                    let fileName = `Telegram_File_${msg.id}`;
                     let fileSize = 0;
 
+                    // Try to extract name and size from different Telegram media structures
                     if (msg.file) {
                         fileName = msg.file.name || fileName;
                         fileSize = msg.file.size || 0;
+                    } else if (msg.media.document) {
+                        fileSize = msg.media.document.size || 0;
+                        const attr = msg.media.document.attributes.find(a => a instanceof Api.DocumentAttributeFilename);
+                        if (attr) fileName = attr.fileName;
+                    } else if (msg.media.photo) {
+                        const photo = msg.media.photo;
+                        // Use the size of the largest photo version
+                        if (photo.sizes && photo.sizes.length > 0) {
+                            const largest = photo.sizes[photo.sizes.length - 1];
+                            fileSize = largest.size || (largest.w * largest.h * 0.2); // Fallback estimate
+                        }
+                        fileName = `Photo_${msg.id}.jpg`;
                     }
 
                     await this.db.files.insert({

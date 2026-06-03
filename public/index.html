@@ -63,7 +63,7 @@
     </div>
 
     <!-- Auth Overlay -->
-    <div id="auth-overlay" class="auth-overlay">
+    <div id="auth-overlay" class="auth-overlay hidden">
         <div class="auth-card">
             <div class="auth-header">
                 <div class="auth-logo">
@@ -119,6 +119,21 @@
 
             <div id="auth-status" class="auth-status">
                 READY_FOR_SYNC
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal System -->
+    <div id="modal-overlay" class="modal-overlay hidden">
+        <div class="modal-card">
+            <h3 id="modal-title">Modal Title</h3>
+            <p id="modal-message">This is a system message.</p>
+            <div id="modal-input-container" class="hidden">
+                <input type="text" id="modal-input" class="auth-input" placeholder="Enter value...">
+            </div>
+            <div class="modal-actions">
+                <button id="modal-cancel" class="btn btn-outline">Cancel</button>
+                <button id="modal-confirm" class="btn btn-primary"><span class="sweep-effect"></span> Confirm</button>
             </div>
         </div>
     </div>

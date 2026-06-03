@@ -14,21 +14,38 @@ const ManifestService = require("./manifestService");
 const app = express();
 const upload = multer({ dest: "uploads/" });
 
+// Essential for tunnels (Cloudflare, Ngrok, etc.) and reverse proxies
+app.set("trust proxy", 1);
+
 app.use(bodyParser.json());
 app.use(express.static("public"));
 app.use(session({
     store: new FileStore({
         path: "./sessions",
-        retries: 0
+        logFn: () => {}, 
+        retries: 0,
+        ttl: 30 * 24 * 60 * 60 // 30 days
     }),
     secret: process.env.SESSION_SECRET || "telenova-neural-secret-2026",
     resave: false,
     saveUninitialized: false,
+    name: "telenova.sid",
+    proxy: true, // Required for secure: 'auto' with trust proxy
     cookie: { 
-        secure: false, // Set to true if using HTTPS
-        maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+        secure: "auto", 
+        httpOnly: true,
+        sameSite: "lax",
+        maxAge: 30 * 24 * 60 * 60 * 1000 
     }
 }));
+
+// --- Status Route ---
+app.get("/api/auth/status", (req, res) => {
+    res.json({ 
+        isLoggedIn: !!req.session.isLoggedIn,
+        hasConfig: !!(req.session.apiId && req.session.apiHash)
+    });
+});
 
 const apiId = parseInt(process.env.API_ID) || 0;
 const apiHash = process.env.API_HASH || "";
@@ -187,7 +204,7 @@ app.get("/api/files/list", async (req, res) => {
 
     try {
         const { manifest } = await getClientContext(req.sessionID, req.session.sessionString, req.session);
-        const { folders, files } = manifest.getFiles(folderId);
+        const { folders, files } = await manifest.getFiles(folderId);
         
         res.json({
             currentPath: folderId,

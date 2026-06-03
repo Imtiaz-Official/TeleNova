@@ -6,6 +6,43 @@ const state = {
     selectedItem: null
 };
 
+// --- Modal System Logic ---
+const modalOverlay = document.getElementById("modal-overlay");
+const modalTitle = document.getElementById("modal-title");
+const modalMessage = document.getElementById("modal-message");
+const modalInputContainer = document.getElementById("modal-input-container");
+const modalInput = document.getElementById("modal-input");
+const modalCancel = document.getElementById("modal-cancel");
+const modalConfirm = document.getElementById("modal-confirm");
+
+function showModal({ title, message, showInput, confirmText, cancelText }) {
+    return new Promise((resolve) => {
+        modalTitle.innerText = title;
+        modalMessage.innerText = message;
+        modalInputContainer.classList.toggle("hidden", !showInput);
+        modalInput.value = "";
+        modalConfirm.innerText = confirmText || "Confirm";
+        modalCancel.innerText = cancelText || "Cancel";
+        modalOverlay.classList.remove("hidden");
+
+        const cleanup = () => {
+            modalOverlay.classList.add("hidden");
+            modalConfirm.onclick = null;
+            modalCancel.onclick = null;
+        };
+
+        modalConfirm.onclick = () => {
+            const val = showInput ? modalInput.value : true;
+            cleanup();
+            resolve(val);
+        };
+        modalCancel.onclick = () => {
+            cleanup();
+            resolve(null);
+        };
+    });
+}
+
 // --- DOM Elements ---
 const authOverlay = document.getElementById("auth-overlay");
 const fileContainer = document.getElementById("file-container");
@@ -16,24 +53,31 @@ const authStatus = document.getElementById("auth-status");
 
 // --- Initialization & Session Check ---
 async function checkSession() {
-    // Hide UI by default until session is verified
-    document.querySelector(".sidebar").classList.add("hidden");
-    document.querySelector(".main-content").classList.add("hidden");
-    
     try {
-        const res = await fetch("/api/files/list");
+        const res = await fetch("/api/auth/status");
         if (res.ok) {
             const data = await res.json();
-            state.isLoggedIn = true;
-            authOverlay.classList.add("hidden");
-            document.querySelector(".sidebar").classList.remove("hidden");
-            document.querySelector(".main-content").classList.remove("hidden");
-            state.items = data.items;
-            renderFiles();
+            if (data.isLoggedIn) {
+                state.isLoggedIn = true;
+                authOverlay.classList.add("hidden");
+                document.querySelector(".sidebar").classList.remove("hidden");
+                document.querySelector(".main-content").classList.remove("hidden");
+                loadFiles("root");
+            } else if (data.hasConfig) {
+                // System configured but not logged in, show phone step
+                document.getElementById("step-init").classList.add("hidden");
+                document.getElementById("step-phone").classList.remove("hidden");
+                updateProgress(2);
+                showLogin();
+            } else {
+                showLogin();
+            }
         } else {
             showLogin();
         }
     } catch (e) {
+        console.error("Session check failed:", e);
+        // On fatal error, show login as fallback
         showLogin();
     }
 }
@@ -183,7 +227,9 @@ function renderFiles(itemsToRender = state.items) {
                 <span class="item-name">${item.name}</span>
             `;
             
-            card.onclick = (e) => handleItemClick(e, item);
+            card.onclick = (e) => {
+                handleItemClick(e, item);
+            };
             card.oncontextmenu = (e) => handleContextMenu(e, item);
             fileContainer.appendChild(card);
         });
@@ -191,7 +237,7 @@ function renderFiles(itemsToRender = state.items) {
         fileContainer.className = "file-list-view";
         const header = document.createElement("div");
         header.className = "list-header";
-        header.innerHTML = `<div>Name</div><div>Size</div><div>Type</div><div>ID</div>`;
+        header.innerHTML = `<div>Name</div><div>Size</div><div>Type</div><div>ID</div><div></div>`;
         fileContainer.appendChild(header);
 
         itemsToRender.forEach(item => {
@@ -209,13 +255,16 @@ function renderFiles(itemsToRender = state.items) {
             const size = item.type === 'folder' ? '--' : formatBytes(item.size);
             
             row.innerHTML = `
-                <div class="list-name">${iconHtml} ${item.name}</div>
+                <div class="list-name">${iconHtml} <span>${item.name}</span></div>
                 <div>${size}</div>
-                <div>${item.type.toUpperCase()}</div>
+                <div>${(item.type || 'file').toUpperCase()}</div>
                 <div style="font-size: 0.7rem; color: var(--text-secondary)">${item.messageId || 'DIR'}</div>
+                <div></div>
             `;
             
-            row.onclick = (e) => handleItemClick(e, item);
+            row.onclick = (e) => {
+                handleItemClick(e, item);
+            };
             row.oncontextmenu = (e) => handleContextMenu(e, item);
             fileContainer.appendChild(row);
         });
@@ -256,11 +305,30 @@ viewToggleBtn.onclick = () => {
 function handleContextMenu(e, item) {
     e.preventDefault();
     state.selectedItem = item;
-    contextMenu.style.top = `${e.clientY}px`;
-    contextMenu.style.left = `${e.clientX}px`;
+    
     contextMenu.classList.remove("hidden");
     
+    // Smart Positioning
+    let x = e.clientX;
+    let y = e.clientY;
+    
+    const menuWidth = contextMenu.offsetWidth || 180;
+    const menuHeight = contextMenu.offsetHeight || 150;
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    
+    if (x + menuWidth > windowWidth) x = windowWidth - menuWidth - 10;
+    if (y + menuHeight > windowHeight) y = windowHeight - menuHeight - 10;
+    
+    // Prevent negative values
+    x = Math.max(10, x);
+    y = Math.max(10, y);
+
+    contextMenu.style.top = `${y}px`;
+    contextMenu.style.left = `${x}px`;
+    
     document.getElementById("menu-download").classList.toggle("hidden", item.type === 'folder');
+    document.getElementById("menu-open").classList.toggle("hidden", item.type !== 'folder');
 }
 
 document.onclick = () => contextMenu.classList.add("hidden");
@@ -275,8 +343,13 @@ document.getElementById("menu-open").onclick = () => {
 
 document.getElementById("menu-delete").onclick = async () => {
     if (!state.selectedItem) return;
-    const confirmDelete = confirm(`Are you sure you want to delete ${state.selectedItem.name}?`);
-    if (!confirmDelete) return;
+    const confirmed = await showModal({
+        title: "Delete Item",
+        message: `Are you sure you want to permanently delete "${state.selectedItem.name}"? This cannot be undone.`,
+        confirmText: "Delete",
+        cancelText: "Keep it"
+    });
+    if (!confirmed) return;
 
     const id = state.selectedItem.type === 'folder' ? state.selectedItem.id : state.selectedItem.messageId;
     const res = await fetch("/api/files/delete", {
@@ -288,28 +361,60 @@ document.getElementById("menu-delete").onclick = async () => {
     if (res.ok) {
         loadFiles(state.currentPath);
     } else {
-        alert("Delete failed.");
+        showModal({ title: "Operation Failed", message: "System could not delete the selected item." });
     }
 };
 
 // --- Utils ---
 function getFileIcon(name) {
+    if (!name) return 'file';
     const ext = name.split('.').pop().toLowerCase();
-    if (['jpg', 'png', 'gif', 'jpeg', 'webp'].includes(ext)) return 'image';
-    if (['mp4', 'mkv', 'mov', 'webm'].includes(ext)) return 'video';
-    if (['mp3', 'wav', 'ogg', 'm4a'].includes(ext)) return 'music';
-    if (['pdf'].includes(ext)) return 'file-text';
-    if (['doc', 'docx', 'txt', 'md'].includes(ext)) return 'file-text';
-    if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return 'archive';
-    return 'file';
+    
+    const iconMap = {
+        // Images
+        'jpg': 'image', 'jpeg': 'image', 'png': 'image', 'gif': 'image', 'webp': 'image', 
+        'svg': 'image', 'bmp': 'image', 'ico': 'image', 'tiff': 'image', 'heic': 'image',
+        
+        // Video
+        'mp4': 'video', 'mkv': 'video', 'mov': 'video', 'webm': 'video', 'avi': 'video', 
+        'flv': 'video', 'wmv': 'video', 'm4v': 'video', '3gp': 'video',
+        
+        // Music
+        'mp3': 'music', 'wav': 'music', 'ogg': 'music', 'm4a': 'music', 'flac': 'music', 
+        'aac': 'music', 'wma': 'music', 'opus': 'music',
+        
+        // Documents
+        'pdf': 'file-text', 'doc': 'file-text', 'docx': 'file-text', 'txt': 'file-text', 
+        'md': 'file-text', 'rtf': 'file-text', 'odt': 'file-text', 'xls': 'file-text', 
+        'xlsx': 'file-text', 'ppt': 'file-text', 'pptx': 'file-text', 'csv': 'file-text',
+        
+        // Archives
+        'zip': 'archive', 'rar': 'archive', '7z': 'archive', 'tar': 'archive', 'gz': 'archive', 
+        'bz2': 'archive', 'xz': 'archive', 'iso': 'archive',
+        
+        // Code
+        'js': 'code', 'ts': 'code', 'html': 'code', 'css': 'code', 'json': 'code', 
+        'py': 'code', 'java': 'code', 'cpp': 'code', 'c': 'code', 'go': 'code', 
+        'php': 'code', 'rb': 'code', 'sh': 'code', 'sql': 'code',
+        
+        // Executables
+        'exe': 'cpu', 'msi': 'cpu', 'apk': 'cpu', 'app': 'cpu', 'dmg': 'cpu', 'bin': 'cpu'
+    };
+
+    return iconMap[ext] || 'file';
 }
 
 function formatBytes(bytes, decimals = 2) {
-    if (!bytes) return '0 Bytes';
+    if (bytes === 0) return '0 Bytes';
+    if (!bytes || isNaN(bytes)) return 'Unknown Size';
+    
     const k = 1024;
     const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
+    
+    if (i < 0) return bytes + ' Bytes';
+    
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
@@ -346,8 +451,14 @@ document.getElementById("sync-btn").onclick = async () => {
     lucide.createIcons();
 };
 document.getElementById("new-folder-btn").onclick = async () => {
-    const name = prompt("Enter folder name:");
+    const name = await showModal({
+        title: "New Neural Node",
+        message: "Enter a name for your new folder:",
+        showInput: true,
+        confirmText: "Create Node"
+    });
     if (!name) return;
+    
     await fetch("/api/files/create-folder", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

@@ -98,23 +98,39 @@ async function login() {
 // --- File Operations ---
 async function loadFiles(folderId = "root") {
     state.currentPath = folderId;
-    const res = await fetch(`/api/files/list?folderId=${folderId}`);
-    const data = await res.json();
-    state.items = data.items;
-    renderFiles();
-    updateBreadcrumbs(folderId);
+    updateAuthStatus(`LOADING_NODE_${folderId.toUpperCase()}...`, "PROCESS");
+    try {
+        const res = await fetch(`/api/files?folderId=${folderId}`);
+        // Fallback for previous API structure
+        const endpoint = res.ok ? `/api/files?folderId=${folderId}` : `/api/files/list?folderId=${folderId}`;
+        const finalRes = await fetch(endpoint);
+        const data = await finalRes.json();
+        state.items = data.items;
+        renderFiles();
+        updateBreadcrumbs(folderId);
+        updateAuthStatus("SYSTEM_READY", "READY");
+    } catch (e) {
+        updateAuthStatus("VFS_IO_ERROR", "ERROR");
+    }
 }
 
-function renderFiles() {
+// --- Search Implementation ---
+document.querySelector(".search-bar").oninput = (e) => {
+    const query = e.target.value.toLowerCase();
+    const filtered = state.items.filter(item => item.name.toLowerCase().includes(query));
+    renderFiles(filtered);
+};
+
+function renderFiles(itemsToRender = state.items) {
     fileContainer.innerHTML = "";
     updateViewBtn();
 
     if (state.viewMode === "grid") {
         fileContainer.className = "file-grid";
-        state.items.forEach((item, index) => {
+        itemsToRender.forEach((item, index) => {
             const card = document.createElement("div");
             card.className = "item-card";
-            card.style.animationDelay = `${index * 0.05}s`;
+            card.style.animationDelay = `${index * 0.03}s`;
             
             const isImage = ['jpg', 'png', 'gif', 'jpeg', 'webp'].includes(item.name.split('.').pop().toLowerCase());
             const iconName = item.type === 'folder' ? 'folder' : getFileIcon(item.name);
@@ -140,7 +156,7 @@ function renderFiles() {
         header.innerHTML = `<div>Name</div><div>Size</div><div>Type</div><div>ID</div>`;
         fileContainer.appendChild(header);
 
-        state.items.forEach(item => {
+        itemsToRender.forEach(item => {
             const row = document.createElement("div");
             row.className = "list-item";
             
@@ -260,9 +276,10 @@ function formatBytes(bytes, decimals = 2) {
 }
 
 function updateBreadcrumbs(folderId) {
-    breadcrumbs.innerHTML = `<span onclick="loadFiles('root')">My Drive</span>`;
+    breadcrumbs.innerHTML = `<span onclick="loadFiles('root')">Neural Drive</span>`;
     if (folderId !== 'root') {
-        breadcrumbs.innerHTML += ` <span style="margin: 0 8px; color: var(--text-secondary);">/</span> <span>${folderId}</span>`;
+        const displayName = folderId.startsWith('f_') ? "Subfolder" : folderId;
+        breadcrumbs.innerHTML += ` <span style="margin: 0 12px; opacity: 0.3;">/</span> <span style="color: var(--accent); font-weight: 700;">${displayName}</span>`;
     }
 }
 

@@ -1,50 +1,62 @@
 const { Api } = require("telegram");
+const Datastore = require("nedb-promises");
+const path = require("path");
 const fs = require("fs");
 
 class ManifestService {
-    constructor(client) {
+    constructor(client, userId) {
         this.client = client;
+        this.userId = userId;
         this.manifestMessageId = null;
-        this.data = {
-            version: 1,
-            folders: [
-                { id: "root", name: "root", parentId: null }
-            ],
-            files: []
+        
+        // Ensure data directory exists
+        const dataDir = path.join(process.cwd(), "data");
+        if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir);
+
+        // Individual databases for each user
+        this.db = {
+            folders: Datastore.create({ filename: path.join(dataDir, `folders_${userId}.db`), autoload: true }),
+            files: Datastore.create({ filename: path.join(dataDir, `files_${userId}.db`), autoload: true })
         };
     }
 
     async init() {
-        // Search for existing manifest in Saved Messages
+        // Initialize root folder if it doesn't exist
+        const root = await this.db.folders.findOne({ id: "root" });
+        if (!root) {
+            await this.db.folders.insert({ id: "root", name: "root", parentId: null });
+        }
+
+        // Search for cloud manifest in Saved Messages (for cloud backup/sync)
         const messages = await this.client.getMessages("me", {
             search: "TELENOVA_MANIFEST_V1",
             limit: 1
         });
 
         if (messages.length > 0) {
-            const msg = messages[0];
-            this.manifestMessageId = msg.id;
-            try {
-                // Assuming the manifest is stored as a text message or a small file
-                const content = msg.message.split("MANIFEST_DATA:")[1];
-                if (content) {
-                    this.data = JSON.parse(content);
-                }
-            } catch (e) {
-                console.error("Failed to parse manifest:", e);
-            }
-        } else {
-            await this.save();
+            this.manifestMessageId = messages[0].id;
         }
     }
 
-    async save() {
-        const manifestString = `TELENOVA_MANIFEST_V1\nMANIFEST_DATA:${JSON.stringify(this.data)}`;
+    async saveCloudBackup() {
+        // Prepare data for cloud backup
+        const folders = await this.db.folders.find({});
+        const files = await this.db.files.find({});
+        const data = { version: 1, folders, files };
+        
+        const manifestString = `TELENOVA_MANIFEST_V1\nMANIFEST_DATA:${JSON.stringify(data)}`;
+        
         if (this.manifestMessageId) {
-            await this.client.editMessage("me", {
-                message: this.manifestMessageId,
-                text: manifestString
-            });
+            try {
+                await this.client.editMessage("me", {
+                    message: this.manifestMessageId,
+                    text: manifestString
+                });
+            } catch (e) {
+                // If message was deleted, send new one
+                const result = await this.client.sendMessage("me", { message: manifestString });
+                this.manifestMessageId = result.id;
+            }
         } else {
             const result = await this.client.sendMessage("me", { message: manifestString });
             this.manifestMessageId = result.id;
@@ -52,17 +64,14 @@ class ManifestService {
     }
 
     async sync() {
-        // Fetch last 100 messages from Saved Messages
         const messages = await this.client.getMessages("me", { limit: 100 });
         let addedCount = 0;
 
         for (const msg of messages) {
-            // Check if it's a document and not our manifest
             if (msg.media && (msg.media.document || msg.media.video || msg.media.photo)) {
                 if (msg.id === this.manifestMessageId) continue;
                 
-                // Check if already indexed
-                const exists = this.data.files.some(f => f.messageId === msg.id);
+                const exists = await this.db.files.findOne({ messageId: msg.id });
                 if (!exists) {
                     let fileName = "Telegram_File_" + msg.id;
                     let fileSize = 0;
@@ -72,12 +81,13 @@ class ManifestService {
                         fileSize = msg.file.size || 0;
                     }
 
-                    this.data.files.push({
+                    await this.db.files.insert({
                         id: "tn_" + msg.id,
                         name: fileName,
                         messageId: msg.id,
                         folderId: "root",
                         size: fileSize,
+                        createdAt: new Date(),
                         isImported: true
                     });
                     addedCount++;
@@ -86,40 +96,45 @@ class ManifestService {
         }
 
         if (addedCount > 0) {
-            await this.save();
+            await this.saveCloudBackup();
         }
         return addedCount;
     }
 
     async createFolder(name, parentId = "root") {
         const id = "f_" + Math.random().toString(36).substr(2, 9);
-        this.data.folders.push({ id, name, parentId });
-        await this.save();
-        return id;
+        const folder = await this.db.folders.insert({ id, name, parentId, createdAt: new Date() });
+        await this.saveCloudBackup();
+        return folder.id;
     }
 
     async addFile(name, messageId, folderId = "root", size) {
-        this.data.files.push({ name, messageId, folderId, size });
-        await this.save();
+        await this.db.files.insert({
+            id: "tn_" + messageId,
+            name,
+            messageId,
+            folderId,
+            size,
+            createdAt: new Date()
+        });
+        await this.saveCloudBackup();
     }
 
-    getFiles(folderId = "root") {
-        const folders = this.data.folders.filter(f => f.parentId === folderId);
-        const files = this.data.files.filter(f => f.folderId === folderId);
+    async getFiles(folderId = "root") {
+        const folders = await this.db.folders.find({ parentId: folderId });
+        const files = await this.db.files.find({ folderId: folderId });
         return { folders, files };
     }
 
     async deleteItem(id, type) {
         if (type === 'folder') {
-            this.data.folders = this.data.folders.filter(f => f.id !== id);
-            // Also delete files inside the folder (optional but cleaner)
-            this.data.files = this.data.files.filter(f => f.folderId !== id);
+            await this.db.folders.remove({ id });
+            await this.db.files.remove({ folderId: id }, { multi: true });
         } else {
-            // Note: In our current VFS, 'id' for files is a bit loose, 
-            // but we can use name or messageId. Let's use messageId if available.
-            this.data.files = this.data.files.filter(f => f.messageId !== id);
+            // id here is messageId for files in our current logic
+            await this.db.files.remove({ messageId: id });
         }
-        await this.save();
+        await this.saveCloudBackup();
     }
 }
 

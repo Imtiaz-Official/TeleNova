@@ -2,6 +2,7 @@ const { TelegramClient, Api } = require("telegram");
 const { StringSession } = require("telegram/sessions");
 const express = require("express");
 const session = require("express-session");
+const FileStore = require("session-file-store")(session);
 const bodyParser = require("body-parser");
 const multer = require("multer");
 const path = require("path");
@@ -16,10 +17,17 @@ const upload = multer({ dest: "uploads/" });
 app.use(bodyParser.json());
 app.use(express.static("public"));
 app.use(session({
-    secret: "telenova-secret-key",
+    store: new FileStore({
+        path: "./sessions",
+        retries: 0
+    }),
+    secret: process.env.SESSION_SECRET || "telenova-neural-secret-2026",
     resave: false,
-    saveUninitialized: true,
-    cookie: { secure: false }
+    saveUninitialized: false,
+    cookie: { 
+        secure: false, // Set to true if using HTTPS
+        maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+    }
 }));
 
 const apiId = parseInt(process.env.API_ID) || 0;
@@ -46,8 +54,11 @@ async function getClientContext(sessionId, sessionString, sessionData) {
             connectionRetries: 5,
         });
         await client.connect();
-        const manifest = new ManifestService(client);
+        
+        const me = await client.getMe();
+        const manifest = new ManifestService(client, me.id.toString());
         await manifest.init();
+        
         clients[sessionId] = { client, manifest };
     }
     return clients[sessionId];
@@ -86,7 +97,6 @@ app.post("/api/auth/send-code", async (req, res) => {
             },
             onError: (err) => {
                 console.error("Client Start Error:", err);
-                // Don't delete immediately so we can catch the error in the route
             }
         });
 
@@ -132,10 +142,12 @@ app.post("/api/auth/login", async (req, res) => {
         try {
             await ctx.loginPromise;
             
+            const me = await ctx.client.getMe();
             req.session.sessionString = ctx.client.session.save();
             req.session.isLoggedIn = true;
+            req.session.userId = me.id.toString();
 
-            const manifest = new ManifestService(ctx.client);
+            const manifest = new ManifestService(ctx.client, me.id.toString());
             await manifest.init();
             clients[req.sessionID].manifest = manifest;
 
@@ -143,11 +155,10 @@ app.post("/api/auth/login", async (req, res) => {
             res.json({ success: true });
         } catch (err) {
             if (err.errorMessage === 'PASSWORD_HASH_INVALID') {
-                // If wrong password, we allow another try by resetting waiting state
                 if (pendingLogins[req.sessionID]) {
                     pendingLogins[req.sessionID].isWaitingForPassword = true;
                 }
-                return res.status(400).json({ success: false, error: "INVALID_PASSWORD", message: "Wrong 2FA password. Please try again." });
+                return res.status(400).json({ success: false, error: "INVALID_PASSWORD", message: "Wrong 2FA password." });
             }
             throw err;
         }

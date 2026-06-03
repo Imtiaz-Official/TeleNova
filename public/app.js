@@ -2,7 +2,7 @@ const state = {
     isLoggedIn: false,
     currentPath: "root",
     items: [],
-    viewMode: localStorage.getItem("telenova_view_mode") || "grid",
+    viewMode: localStorage.getItem("telenova_view_mode") || "list",
     selectedItem: null
 };
 
@@ -229,14 +229,16 @@ function renderFiles(itemsToRender = state.items) {
                 <span class="item-name">${item.name}</span>
             `;
 
-            // Mouse tracking for hover glow
-            card.onmousemove = (e) => {
-                const rect = card.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                card.style.setProperty('--mouse-x', `${x}px`);
-                card.style.setProperty('--mouse-y', `${y}px`);
-            };
+            // Mouse tracking for hover glow - disabled on touch devices for performance
+            if (!('ontouchstart' in window)) {
+                card.onmousemove = (e) => {
+                    const rect = card.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    card.style.setProperty('--mouse-x', `${x}px`);
+                    card.style.setProperty('--mouse-y', `${y}px`);
+                };
+            }
             
             card.onclick = (e) => {
                 handleItemClick(e, item);
@@ -266,10 +268,35 @@ function renderFiles(itemsToRender = state.items) {
 
             const size = item.type === 'folder' ? '--' : formatBytes(item.size);
             
+            let displayType = 'FILE';
+            if (item.type === 'folder') {
+                displayType = 'FOLDER';
+            } else if (item.name && item.name.includes('.')) {
+                const ext = item.name.split('.').pop().toUpperCase();
+                const typeMap = {
+                    'PPT': 'POWERPOINT', 'PPTX': 'POWERPOINT',
+                    'DOC': 'WORD', 'DOCX': 'WORD',
+                    'XLS': 'EXCEL', 'XLSX': 'EXCEL',
+                    'TXT': 'TEXT', 'MD': 'MARKDOWN',
+                    'APK': 'ANDROID APP',
+                    'PDF': 'PDF DOCUMENT',
+                    'ZIP': 'ARCHIVE', 'RAR': 'ARCHIVE', '7Z': 'ARCHIVE',
+                    'MP4': 'VIDEO', 'MKV': 'VIDEO', 'MOV': 'VIDEO',
+                    'MP3': 'AUDIO', 'WAV': 'AUDIO', 'FLAC': 'AUDIO',
+                    'JPG': 'IMAGE', 'PNG': 'IMAGE', 'WEBP': 'IMAGE', 'JPEG': 'IMAGE',
+                    'EXE': 'EXECUTABLE', 'MSI': 'INSTALLER', 'APP': 'MACOS APP',
+                    'DMG': 'DISK IMAGE', 'ISO': 'DISK IMAGE',
+                    'JS': 'JAVASCRIPT', 'TS': 'TYPESCRIPT', 'PY': 'PYTHON',
+                    'C': 'C SOURCE', 'CPP': 'C++ SOURCE', 'GO': 'GO SOURCE',
+                    'HTML': 'HTML DOCUMENT', 'CSS': 'STYLESHEET', 'JSON': 'JSON DATA'
+                };
+                displayType = typeMap[ext] || (ext.length > 0 ? ext : 'FILE');
+            }
+
             row.innerHTML = `
                 <div class="list-name">${iconHtml} <span>${item.name}</span></div>
                 <div>${size}</div>
-                <div>${(item.type || 'file').toUpperCase()}</div>
+                <div>${displayType}</div>
                 <div style="font-size: 0.7rem; color: var(--text-secondary)">${item.messageId || 'DIR'}</div>
                 <div></div>
             `;
@@ -410,35 +437,38 @@ function getFileIcon(name) {
     
     const iconMap = {
         // Images
-        'jpg': 'image', 'jpeg': 'image', 'png': 'image', 'gif': 'image', 'webp': 'image', 
+        'jpg': 'image', 'jpeg': 'image', 'png': 'image', 'gif': 'image', 'webp': 'image',
         'svg': 'image', 'bmp': 'image', 'ico': 'image', 'tiff': 'image', 'heic': 'image',
-        
-        // Video
-        'mp4': 'video', 'mkv': 'video', 'mov': 'video', 'webm': 'video', 'avi': 'video', 
-        'flv': 'video', 'wmv': 'video', 'm4v': 'video', '3gp': 'video',
-        
-        // Music
-        'mp3': 'music', 'wav': 'music', 'ogg': 'music', 'm4a': 'music', 'flac': 'music', 
-        'aac': 'music', 'wma': 'music', 'opus': 'music',
-        
-        // Documents
-        'pdf': 'file-text', 'doc': 'file-text', 'docx': 'file-text', 'txt': 'file-text', 
-        'md': 'file-text', 'rtf': 'file-text', 'odt': 'file-text', 'xls': 'file-text', 
-        'xlsx': 'file-text', 'ppt': 'file-text', 'pptx': 'file-text', 'csv': 'file-text',
-        
-        // Archives
-        'zip': 'archive', 'rar': 'archive', '7z': 'archive', 'tar': 'archive', 'gz': 'archive', 
-        'bz2': 'archive', 'xz': 'archive', 'iso': 'archive',
-        
-        // Code
-        'js': 'code', 'ts': 'code', 'html': 'code', 'css': 'code', 'json': 'code', 
-        'py': 'code', 'java': 'code', 'cpp': 'code', 'c': 'code', 'go': 'code', 
-        'php': 'code', 'rb': 'code', 'sh': 'code', 'sql': 'code',
-        
-        // Executables
-        'exe': 'cpu', 'msi': 'cpu', 'apk': 'cpu', 'app': 'cpu', 'dmg': 'cpu', 'bin': 'cpu'
-    };
+        'psd': 'image', 'ai': 'image', 'eps': 'image',
 
+        // Video
+        'mp4': 'video', 'mkv': 'video', 'mov': 'video', 'webm': 'video', 'avi': 'video',
+        'flv': 'video', 'wmv': 'video', 'm4v': 'video', '3gp': 'video', 'ts': 'video',
+
+        // Music
+        'mp3': 'music', 'wav': 'music', 'ogg': 'music', 'm4a': 'music', 'flac': 'music',
+        'aac': 'music', 'wma': 'music', 'opus': 'music', 'mid': 'music',
+
+        // Documents
+        'pdf': 'file-text', 'doc': 'file-text', 'docx': 'file-text', 'txt': 'file-text',
+        'md': 'file-text', 'rtf': 'file-text', 'odt': 'file-text', 'xls': 'file-text',
+        'xlsx': 'file-text', 'ppt': 'presentation', 'pptx': 'presentation', 'csv': 'file-text',
+        'epub': 'book', 'mobi': 'book', 'azw3': 'book',
+
+        // Archives
+        'zip': 'archive', 'rar': 'archive', '7z': 'archive', 'tar': 'archive', 'gz': 'archive',
+        'bz2': 'archive', 'xz': 'archive', 'iso': 'archive', 'deb': 'archive', 'rpm': 'archive',
+
+        // Code
+        'js': 'code', 'ts': 'code', 'html': 'code', 'css': 'code', 'json': 'code',
+        'py': 'code', 'java': 'code', 'cpp': 'code', 'c': 'code', 'go': 'code',
+        'php': 'code', 'rb': 'code', 'sh': 'code', 'sql': 'code', 'rs': 'code',
+        'vue': 'code', 'jsx': 'code', 'tsx': 'code', 'xml': 'code', 'yaml': 'code', 'yml': 'code',
+
+        // Executables
+        'exe': 'cpu', 'msi': 'cpu', 'apk': 'cpu', 'app': 'cpu', 'dmg': 'cpu', 'bin': 'cpu',
+        'bat': 'terminal', 'cmd': 'terminal'
+    };
     return iconMap[ext] || 'file';
 }
 
@@ -468,6 +498,7 @@ function updateAuthStatus(text, type) {
     if(authStatus) {
         authStatus.innerText = text;
         authStatus.style.color = type === "ERROR" ? "var(--danger)" : "var(--accent)";
+        authStatus.classList.toggle("status-pulse", type === "PROCESS");
     }
 }
 
@@ -476,16 +507,33 @@ document.getElementById("init-btn").onclick = initializeSystem;
 document.getElementById("send-code-btn").onclick = sendCode;
 document.getElementById("login-btn").onclick = login;
 document.getElementById("sync-btn").onclick = async () => {
-    updateAuthStatus("SYNCING_CLOUD_INDEX...", "PROCESS");
-    const res = await fetch("/api/files/sync", { method: "POST" });
-    const data = await res.json();
-    if (data.success) {
-        updateAuthStatus(`SYNC_COMPLETE:_${data.addedCount}_NEW_ITEMS`, "READY");
-        loadFiles(state.currentPath);
-    } else {
-        updateAuthStatus("SYNC_FAILED", "ERROR");
-    }
+    const btn = document.getElementById("sync-btn");
+    const originalHtml = btn.innerHTML;
+    
+    // UI Loading State
+    btn.disabled = true;
+    btn.innerHTML = `<i data-lucide="loader-2" class="status-pulse"></i> <span>Syncing...</span>`;
     if (window.lucide) lucide.createIcons();
+    
+    updateAuthStatus("SYNCING_CLOUD_INDEX..._SCANNING_TELEGRAM", "PROCESS");
+    
+    try {
+        const res = await fetch("/api/files/sync", { method: "POST" });
+        const data = await res.json();
+        
+        if (data.success) {
+            updateAuthStatus(`SYNC_COMPLETE:_${data.addedCount}_ITEMS_PROCESSED`, "READY");
+            loadFiles(state.currentPath);
+        } else {
+            updateAuthStatus("SYNC_FAILED", "ERROR");
+        }
+    } catch (e) {
+        updateAuthStatus("NETWORK_ERROR_DURING_SYNC", "ERROR");
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+        if (window.lucide) lucide.createIcons();
+    }
 };
 
 document.getElementById("remote-save-btn").onclick = async () => {

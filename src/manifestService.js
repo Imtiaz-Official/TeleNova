@@ -64,57 +64,64 @@ class ManifestService {
     }
 
     async sync() {
-        const messages = await this.client.getMessages("me", { limit: 100 });
+        const messages = await this.client.getMessages("me", { limit: 200 });
         let addedCount = 0;
 
         for (const msg of messages) {
-            // Comprehensive check for media types
-            const hasMedia = msg.media && (
-                msg.media instanceof Api.MessageMediaDocument ||
-                msg.media instanceof Api.MessageMediaPhoto ||
-                msg.media instanceof Api.MessageMediaWebPage ||
-                msg.media.document || 
-                msg.media.video || 
-                msg.media.photo
-            );
-
-            if (hasMedia) {
+            if (msg.media) {
                 if (msg.id === this.manifestMessageId) continue;
                 
-                // Check database by messageId
-                const exists = await this.db.files.findOne({ messageId: msg.id });
-                if (!exists) {
-                    let fileName = `Telegram_File_${msg.id}`;
-                    let fileSize = 0;
+                const currentMsgId = Number(msg.id);
+                let fileName = `File_${currentMsgId}`;
+                let fileSize = 0;
 
-                    // Try to extract name and size from different Telegram media structures
-                    if (msg.file) {
-                        fileName = msg.file.name || fileName;
-                        fileSize = msg.file.size || 0;
-                    } else if (msg.media.document) {
-                        fileSize = msg.media.document.size || 0;
-                        const attr = msg.media.document.attributes.find(a => a instanceof Api.DocumentAttributeFilename);
-                        if (attr) fileName = attr.fileName;
-                    } else if (msg.media.photo) {
-                        const photo = msg.media.photo;
-                        // Use the size of the largest photo version
-                        if (photo.sizes && photo.sizes.length > 0) {
-                            const largest = photo.sizes[photo.sizes.length - 1];
-                            fileSize = largest.size || (largest.w * largest.h * 0.2); // Fallback estimate
-                        }
-                        fileName = `Photo_${msg.id}.jpg`;
+                if (msg.file) {
+                    fileName = msg.file.name || fileName;
+                    fileSize = Number(msg.file.size || 0);
+                } else if (msg.media.document) {
+                    const doc = msg.media.document;
+                    fileSize = Number(doc.size || 0);
+                    const attr = doc.attributes.find(a => a instanceof Api.DocumentAttributeFilename);
+                    if (attr) fileName = attr.fileName;
+                } else if (msg.media.photo) {
+                    fileName = `Photo_${currentMsgId}.jpg`;
+                    const photo = msg.media.photo;
+                    if (photo.sizes && photo.sizes.length > 0) {
+                        const largest = photo.sizes[photo.sizes.length - 1];
+                        fileSize = Number(largest.size || 0);
                     }
+                }
 
+                if (fileSize === 0 && fileName.startsWith('File_')) continue;
+
+                const exists = await this.db.files.findOne({ messageId: currentMsgId });
+                
+                if (!exists) {
                     await this.db.files.insert({
-                        id: "tn_" + msg.id,
+                        id: "tn_" + currentMsgId,
                         name: fileName,
-                        messageId: msg.id,
+                        messageId: currentMsgId,
                         folderId: "root",
                         size: fileSize,
                         createdAt: new Date(),
                         isImported: true
                     });
                     addedCount++;
+                } else {
+                    const needsRepair = 
+                        !exists.size || 
+                        Number(exists.size) === 0 || 
+                        typeof exists.size !== 'number' ||
+                        exists.name.startsWith('File_') ||
+                        typeof exists.messageId !== 'number';
+
+                    if (needsRepair) {
+                        await this.db.files.update(
+                            { _id: exists._id }, 
+                            { $set: { size: Number(fileSize), name: fileName, messageId: currentMsgId } }
+                        );
+                        addedCount++;
+                    }
                 }
             }
         }
@@ -134,11 +141,11 @@ class ManifestService {
 
     async addFile(name, messageId, folderId = "root", size) {
         await this.db.files.insert({
-            id: "tn_" + messageId,
+            id: "tn_" + Number(messageId),
             name,
-            messageId,
+            messageId: Number(messageId),
             folderId,
-            size,
+            size: Number(size || 0),
             createdAt: new Date()
         });
         await this.saveCloudBackup();

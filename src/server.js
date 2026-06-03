@@ -359,15 +359,28 @@ app.post("/api/files/save-from-link", async (req, res) => {
         const msg = result[0];
         if (!msg || !msg.media) throw new Error("No media found in this link");
 
-        let fileName = `Saved_File_${msg.id}`;
+        const currentMsgId = Number(msg.id);
+        let fileName = `Saved_File_${currentMsgId}`;
         let fileSize = 0;
 
         if (msg.file) {
             fileName = msg.file.name || fileName;
-            fileSize = msg.file.size || 0;
+            fileSize = Number(msg.file.size || 0);
+        } else if (msg.media.document) {
+            const doc = msg.media.document;
+            fileSize = Number(doc.size || 0);
+            const attr = doc.attributes.find(a => a instanceof Api.DocumentAttributeFilename);
+            if (attr) fileName = attr.fileName;
+        } else if (msg.media.photo) {
+            const photo = msg.media.photo;
+            if (photo.sizes && photo.sizes.length > 0) {
+                const largest = photo.sizes[photo.sizes.length - 1];
+                fileSize = Number(largest.size || 0);
+            }
+            fileName = `Photo_${currentMsgId}.jpg`;
         }
 
-        await manifest.addFile(fileName, msg.id, folderId || "root", fileSize);
+        await manifest.addFile(fileName, currentMsgId, folderId || "root", fileSize);
 
         res.json({ success: true, fileName });
     } catch (error) {

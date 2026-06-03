@@ -44,13 +44,21 @@ app.post("/api/config/init", (req, res) => {
     
     req.session.apiId = parseInt(apiId);
     req.session.apiHash = apiHash;
-    res.json({ success: true });
+    req.session.save(() => {
+        res.json({ success: true });
+    });
 });
 
 // Helper to get or create client and manifest
 async function getClientContext(sessionId, sessionString, sessionData) {
     if (!clients[sessionId]) {
-        const client = new TelegramClient(new StringSession(sessionString), sessionData.apiId, sessionData.apiHash, {
+        // Fallback to env vars if session data is missing
+        const finalApiId = sessionData.apiId || parseInt(process.env.API_ID);
+        const finalApiHash = sessionData.apiHash || process.env.API_HASH;
+
+        if (!finalApiId || !finalApiHash) throw new Error("API credentials missing");
+
+        const client = new TelegramClient(new StringSession(sessionString), finalApiId, finalApiHash, {
             connectionRetries: 5,
         });
         await client.connect();
@@ -152,7 +160,10 @@ app.post("/api/auth/login", async (req, res) => {
             clients[req.sessionID].manifest = manifest;
 
             delete pendingLogins[req.sessionID];
-            res.json({ success: true });
+            
+            req.session.save(() => {
+                res.json({ success: true });
+            });
         } catch (err) {
             if (err.errorMessage === 'PASSWORD_HASH_INVALID') {
                 if (pendingLogins[req.sessionID]) {

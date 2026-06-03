@@ -38,7 +38,7 @@
                 <button class="btn btn-outline" id="sync-btn"><i data-lucide="refresh-cw"></i> <span>Sync TG</span></button>
                 <button class="btn btn-outline" id="view-toggle-btn"><i data-lucide="layout-grid"></i> <span>Grid View</span></button>
                 <button class="btn btn-outline" id="new-folder-btn"><i data-lucide="folder-plus"></i> <span>New Folder</span></button>
-                <label for="file-upload" class="btn btn-primary"><i data-lucide="upload-cloud"></i> <span>Upload</span></label>
+                <label for="file-upload" class="btn btn-primary"><span class="sweep-effect"></span> <i data-lucide="upload-cloud"></i> <span>Upload</span></label>
                 <input type="file" id="file-upload" class="hidden">
             </div>
         </header>
@@ -92,7 +92,7 @@
                     <input type="text" id="api-hash-input" placeholder="Your secret API hash" class="auth-input">
                     <span class="input-hint">Used to secure your connection</span>
                 </div>
-                <button id="init-btn" class="btn btn-primary btn-block">Initialize Setup</button>
+                <button id="init-btn" class="btn btn-primary btn-block"><span class="sweep-effect"></span> Initialize Setup</button>
             </div>
 
             <div id="step-phone" class="auth-step hidden">
@@ -101,7 +101,7 @@
                     <input type="text" id="phone-input" placeholder="+1234567890" class="auth-input">
                     <span class="input-hint">Include country code (e.g., +1 for US)</span>
                 </div>
-                <button id="send-code-btn" class="btn btn-primary btn-block">Request Access Code</button>
+                <button id="send-code-btn" class="btn btn-primary btn-block"><span class="sweep-effect"></span> Request Access Code</button>
             </div>
 
             <div id="step-verify" class="auth-step hidden">
@@ -114,7 +114,7 @@
                     <input type="password" id="password-input" placeholder="Only if 2FA is enabled" class="auth-input">
                     <span class="input-hint">Your private security layer</span>
                 </div>
-                <button id="login-btn" class="btn btn-primary btn-block">Establish Uplink</button>
+                <button id="login-btn" class="btn btn-primary btn-block"><span class="sweep-effect"></span> Establish Uplink</button>
             </div>
 
             <div id="auth-status" class="auth-status">

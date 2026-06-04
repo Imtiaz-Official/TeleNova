@@ -82,6 +82,7 @@ const recentContainer = document.getElementById("recent-container");
 
 const navHome = document.getElementById("nav-home");
 const navFiles = document.getElementById("nav-files");
+const navRecent = document.getElementById("nav-recent");
 const searchToggleBtn = document.getElementById("search-toggle-btn");
 const searchContainer = document.getElementById("search-container");
 const toolsToggleBtn = document.getElementById("tools-toggle-btn");
@@ -181,16 +182,35 @@ async function checkSession() {
 
 function showView(view) {
     localStorage.setItem("telenova_active_view", view);
-    if (view === 'home') {
+    
+    // Reset all nav highlights
+    navHome.classList.remove("active");
+    navFiles.classList.remove("active");
+    if (navRecent) navRecent.classList.remove("active");
+    
+    if (view === 'home' || view === 'recent') {
         dashboardView.classList.remove("hidden");
         explorerView.classList.add("hidden");
-        navHome.classList.add("active");
-        navFiles.classList.remove("active");
-        loadDashboard();
+        
+        if (view === 'home') navHome.classList.add("active");
+        if (view === 'recent') navRecent.classList.add("active");
+        
+        loadDashboard().then(() => {
+            if (view === 'recent') {
+                setTimeout(() => {
+                    const recentSection = document.querySelector(".recent-section");
+                    if (recentSection) {
+                        dashboardView.parentElement.scrollTop = recentSection.offsetTop;
+                        dashboardView.parentElement.scrollTo({ top: recentSection.offsetTop, behavior: 'smooth' });
+                        // fallback scroll on document body
+                        document.querySelector(".main-content").scrollTo({ top: recentSection.offsetTop, behavior: 'smooth' });
+                    }
+                }, 100);
+            }
+        });
     } else {
         dashboardView.classList.add("hidden");
         explorerView.classList.remove("hidden");
-        navHome.classList.remove("active");
         navFiles.classList.add("active");
     }
 }
@@ -743,8 +763,9 @@ function updateAuthStatus(text, type) {
 }
 
 // --- Event Listeners ---
-navHome.onclick = () => showView('home');
-navFiles.onclick = () => {
+if (navHome) navHome.onclick = () => showView('home');
+if (navRecent) navRecent.onclick = () => showView('recent');
+if (navFiles) navFiles.onclick = () => {
     showView('explorer');
     loadFiles('root');
 };

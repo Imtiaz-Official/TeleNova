@@ -18,6 +18,19 @@ const upload = multer({ dest: "uploads/" });
 // Share Link Database
 const sharesDb = Datastore.create({ filename: path.join(process.cwd(), "data", "shares.db"), autoload: true });
 
+// Master Config for Global Auto-Login
+const CONFIG_PATH = path.join(process.cwd(), "data", "master_config.json");
+function saveMasterConfig(data) {
+    if (!fs.existsSync(path.dirname(CONFIG_PATH))) fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true });
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(data));
+}
+function getMasterConfig() {
+    if (fs.existsSync(CONFIG_PATH)) {
+        try { return JSON.parse(fs.readFileSync(CONFIG_PATH)); } catch (e) { return null; }
+    }
+    return null;
+}
+
 // Essential for tunnels (Cloudflare, Ngrok, etc.) and reverse proxies
 app.set("trust proxy", 1);
 
@@ -45,9 +58,11 @@ app.use(session({
 
 // --- Status Route ---
 app.get("/api/auth/status", (req, res) => {
+    const master = getMasterConfig();
+    const isLoggedIn = req.session.isLoggedIn || (master && master.sessionString);
     res.json({ 
-        isLoggedIn: !!req.session.isLoggedIn,
-        hasConfig: !!(req.session.apiId && req.session.apiHash)
+        isLoggedIn: !!isLoggedIn,
+        hasConfig: !!(req.session.apiId || (master && master.apiId))
     });
 });
 
@@ -73,13 +88,17 @@ app.post("/api/config/init", (req, res) => {
 // Helper to get or create client and manifest
 async function getClientContext(sessionId, sessionString, sessionData) {
     if (!clients[sessionId]) {
-        // Fallback to env vars if session data is missing
-        const finalApiId = sessionData.apiId || parseInt(process.env.API_ID);
-        const finalApiHash = sessionData.apiHash || process.env.API_HASH;
+        const master = getMasterConfig();
+        
+        // Final credentials priority: session > master config > environment
+        const finalSessionString = sessionString || (master ? master.sessionString : "");
+        const finalApiId = sessionData.apiId || (master ? master.apiId : parseInt(process.env.API_ID));
+        const finalApiHash = sessionData.apiHash || (master ? master.apiHash : process.env.API_HASH);
 
         if (!finalApiId || !finalApiHash) throw new Error("API credentials missing");
+        if (!finalSessionString) throw new Error("Session string missing");
 
-        const client = new TelegramClient(new StringSession(sessionString), finalApiId, finalApiHash, {
+        const client = new TelegramClient(new StringSession(finalSessionString), finalApiId, finalApiHash, {
             connectionRetries: 5,
         });
         await client.connect();
@@ -172,11 +191,21 @@ app.post("/api/auth/login", async (req, res) => {
             await ctx.loginPromise;
             
             const me = await ctx.client.getMe();
-            req.session.sessionString = ctx.client.session.save();
+            const sessionString = ctx.client.session.save();
+            req.session.sessionString = sessionString;
             req.session.isLoggedIn = true;
             req.session.userId = me.id.toString();
 
+            // Save to Master Config for network-wide auto-login
+            saveMasterConfig({
+               sessionString,
+               apiId: req.session.apiId || ctx.client.apiId,
+               apiHash: req.session.apiHash || ctx.client.apiHash,
+               userId: me.id.toString()
+            });
+
             const manifest = new ManifestService(ctx.client, me.id.toString());
+
             await manifest.init();
             clients[req.sessionID].manifest = manifest;
 
@@ -198,6 +227,28 @@ app.post("/api/auth/login", async (req, res) => {
         console.error("Login Error:", error);
         res.status(500).json({ success: false, error: error.message });
     }
+});
+
+app.post("/api/auth/logout", async (req, res) => {
+    if (clients[req.sessionID]) {
+        try {
+            if (clients[req.sessionID].client) {
+                await clients[req.sessionID].client.disconnect();
+            }
+        } catch (e) {
+            console.error("Logout disconnect error:", e);
+        }
+        delete clients[req.sessionID];
+    }
+    
+    // Clear master config to prevent auto-login after explicit logout
+    saveMasterConfig(null);
+
+    req.session.destroy((err) => {
+        if (err) return res.status(500).json({ success: false, error: "Logout failed" });
+        res.clearCookie("telenova.sid");
+        res.json({ success: true });
+    });
 });
 
 // --- File System Routes ---

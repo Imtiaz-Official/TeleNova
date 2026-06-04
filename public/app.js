@@ -5,7 +5,8 @@ const state = {
     viewMode: localStorage.getItem("telenova_view_mode") || "list",
     selectedItem: null,
     sortBy: 'name', // name, size, date
-    filterBy: 'all' // all, image, video, doc
+    filterBy: 'all', // all, image, video, doc
+    folderNames: { 'root': 'Neural Drive' }
 };
 
 // --- Modal System Logic ---
@@ -93,7 +94,17 @@ async function checkSession() {
                 authOverlay.classList.add("hidden");
                 document.querySelector(".sidebar").classList.remove("hidden");
                 document.querySelector(".main-content").classList.remove("hidden");
-                showView('home');
+                
+                // Restore State
+                const savedView = localStorage.getItem("telenova_active_view") || 'home';
+                const savedPath = localStorage.getItem("telenova_current_path") || 'root';
+                
+                if (savedView === 'explorer') {
+                    showView('explorer');
+                    loadFiles(savedPath);
+                } else {
+                    showView('home');
+                }
             } else if (data.hasConfig) {
                 // System configured but not logged in, show phone step
                 document.getElementById("step-init").classList.add("hidden");
@@ -113,6 +124,7 @@ async function checkSession() {
 }
 
 function showView(view) {
+    localStorage.setItem("telenova_active_view", view);
     if (view === 'home') {
         dashboardView.classList.remove("hidden");
         explorerView.classList.add("hidden");
@@ -300,6 +312,7 @@ async function login() {
 // --- File Operations ---
 async function loadFiles(folderId = "root") {
     state.currentPath = folderId;
+    localStorage.setItem("telenova_current_path", folderId);
     updateAuthStatus(`LOADING_NODE_${folderId.toUpperCase()}...`, "PROCESS");
     try {
         const res = await fetch(`/api/files/list?folderId=${folderId}`);
@@ -307,6 +320,12 @@ async function loadFiles(folderId = "root") {
         
         const data = await res.json();
         state.items = data.items;
+
+        // Store folder names for breadcrumbs
+        data.items.forEach(item => {
+            if (item.type === 'folder') state.folderNames[item.id] = item.name;
+        });
+
         renderFiles();
         updateBreadcrumbs(folderId);
         updateAuthStatus("SYSTEM_READY", "READY");
@@ -654,7 +673,7 @@ function formatBytes(bytes, decimals = 2) {
 function updateBreadcrumbs(folderId) {
     breadcrumbs.innerHTML = `<span onclick="loadFiles('root')">Neural Drive</span>`;
     if (folderId !== 'root') {
-        const displayName = folderId.startsWith('f_') ? "Subfolder" : folderId;
+        const displayName = state.folderNames[folderId] || folderId;
         breadcrumbs.innerHTML += ` <span style="margin: 0 12px; opacity: 0.3;">/</span> <span style="color: var(--accent); font-weight: 700;">${displayName}</span>`;
     }
 }
@@ -800,14 +819,47 @@ document.getElementById("new-folder-btn").onclick = async () => {
 document.getElementById("file-upload").onchange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    
     const formData = new FormData();
     formData.append("file", file);
     formData.append("folderId", state.currentPath);
-    updateAuthStatus(`UPLOADING_${file.name.toUpperCase()}...`, "PROCESS");
-    const res = await fetch("/api/files/upload", { method: "POST", body: formData });
-    if (res.ok) loadFiles(state.currentPath);
+    
+    const startTime = Date.now();
+    const xhr = new XMLHttpRequest();
+    
+    xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+            const percent = Math.round((event.loaded / event.total) * 100);
+            const elapsed = (Date.now() - startTime) / 1000;
+            const speed = event.loaded / elapsed;
+            const speedText = formatBytes(speed) + "/s";
+            updateAuthStatus(`UPLOADING_${file.name.toUpperCase()}..._${percent}%_(${speedText})`, "PROCESS");
+        }
+    };
+    
+    xhr.onload = () => {
+        if (xhr.status === 200) {
+            updateAuthStatus(`UPLOAD_COMPLETE:_${file.name.toUpperCase()}`, "READY");
+            loadFiles(state.currentPath);
+        } else {
+            updateAuthStatus("UPLOAD_FAILED", "ERROR");
+        }
+    };
+    
+    xhr.onerror = () => updateAuthStatus("NETWORK_ERROR_DURING_UPLOAD", "ERROR");
+    
+    xhr.open("POST", "/api/files/upload");
+    xhr.send(formData);
 };
-document.getElementById("logout-btn").onclick = () => location.reload();
+document.getElementById("logout-btn").onclick = async () => {
+    try {
+        await fetch("/api/auth/logout", { method: "POST" });
+        location.reload();
+    } catch (error) {
+        console.error("Logout error:", error);
+        location.reload();
+    }
+};
 
 function updateStorageStats(items) {
     const totalSize = items.reduce((acc, item) => acc + (item.size || 0), 0);

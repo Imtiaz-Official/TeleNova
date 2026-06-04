@@ -82,6 +82,21 @@ const recentContainer = document.getElementById("recent-container");
 
 const navHome = document.getElementById("nav-home");
 const navFiles = document.getElementById("nav-files");
+const toolbar = document.querySelector(".toolbar");
+
+// --- Scroll Handling for Collapsible Toolbar ---
+let lastScrollTop = 0;
+fileContainer.addEventListener("scroll", () => {
+    const scrollTop = fileContainer.scrollTop;
+    if (scrollTop > 50 && scrollTop > lastScrollTop) {
+        // Scrolling down
+        toolbar.classList.add("collapsed");
+    } else if (scrollTop < lastScrollTop || scrollTop <= 10) {
+        // Scrolling up or at top
+        toolbar.classList.remove("collapsed");
+    }
+    lastScrollTop = scrollTop;
+});
 
 // --- Initialization & Session Check ---
 async function checkSession() {

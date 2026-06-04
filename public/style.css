@@ -225,6 +225,19 @@ body {
     z-index: 50;
     flex-wrap: wrap;
     gap: 24px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+.toolbar.collapsed {
+    min-height: 0;
+    height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin: 0;
+    border-bottom: none;
+    opacity: 0;
+    pointer-events: none;
 }
 
 .search-bar {
@@ -298,8 +311,8 @@ body {
 .file-grid {
     padding: 24px 48px 120px;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 32px;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 20px;
     overflow-y: auto;
     flex: 1;
     align-content: start;
@@ -383,85 +396,80 @@ body {
 
 .modal-option-item i { width: 18px; height: 18px; opacity: 0.8; }
 
-/* --- Refined Item Actions --- */
+/* --- File Grid (Ultra Compact) --- */
+
+.file-grid {
+    padding: 16px 48px 120px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 12px;
+    overflow-y: auto;
+    flex: 1;
+    align-content: start;
+}
 
 .item-card {
     background: var(--bg-card);
     backdrop-filter: blur(20px);
     border: 1px solid var(--border);
-    border-radius: 24px;
-    padding: 24px 16px;
+    border-radius: 12px;
+    padding: 10px;
     text-align: center;
-    transition: all 0.5s cubic-bezier(0.2, 1, 0.3, 1);
-    animation: slideInUp 0.6s cubic-bezier(0.2, 1, 0.3, 1) both;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: slideInUp 0.5s cubic-bezier(0.2, 1, 0.3, 1) both;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: space-between;
-    gap: 16px;
+    justify-content: center;
+    gap: 8px;
     position: relative;
     overflow: hidden;
-    min-height: 240px;
-}
-
-/* Subtle Colorful Rim */
-.item-card {
-    border: 1px solid transparent;
-    background-image: linear-gradient(var(--bg-card), var(--bg-card)), 
-                      conic-gradient(from 0deg, #5c78ff, #00f281, #ff5252, #5c78ff);
-    background-origin: border-box;
-    background-clip: padding-box, border-box;
+    min-height: 100px;
 }
 
 .item-card:hover {
-    transform: translateY(-8px);
-    background-image: linear-gradient(rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.06)), 
-                      conic-gradient(from 0deg, #5c78ff, #00f281, #ff5252, #5c78ff);
-    box-shadow: 
-        0 20px 40px rgba(0,0,0,0.4), 
-        0 0 15px rgba(92, 120, 255, 0.2);
-}
-
-/* Mouse Follow Glow Container */
-.item-card .hover-glow {
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: radial-gradient(circle at var(--mouse-x) var(--mouse-y), rgba(92, 120, 255, 0.15) 0%, transparent 60%);
-    opacity: 0;
-    transition: opacity 0.3s;
-    pointer-events: none;
-    z-index: 0;
-}
-
-.item-card:hover .hover-glow {
-    opacity: 1;
+    transform: translateY(-3px);
+    background: rgba(255, 255, 255, 0.06);
+    border-color: var(--accent);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.3);
 }
 
 .item-icon {
-    font-size: 56px;
+    font-size: 24px;
     display: flex;
     justify-content: center;
-    filter: drop-shadow(0 0 15px rgba(255,255,255,0.08));
-    margin-top: 8px;
+    filter: drop-shadow(0 0 8px rgba(255,255,255,0.05));
     z-index: 1;
 }
 
-.item-icon i { width: 56px; height: 56px; stroke-width: 1.5; }
+.item-icon i { width: 32px; height: 32px; stroke-width: 2; }
+
+.item-name {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    display: block;
+    opacity: 0.9;
+}
 
 /* Category Specific Colors */
-.clr-video { color: var(--clr-video); filter: drop-shadow(0 0 15px rgba(191, 92, 255, 0.2)); }
-.clr-image { color: var(--clr-image); filter: drop-shadow(0 0 15px rgba(255, 92, 157, 0.2)); }
-.clr-audio { color: var(--clr-audio); filter: drop-shadow(0 0 15px rgba(0, 242, 129, 0.2)); }
-.clr-doc { color: var(--clr-doc); filter: drop-shadow(0 0 15px rgba(92, 192, 255, 0.2)); }
-.clr-archive { color: var(--clr-archive); filter: drop-shadow(0 0 15px rgba(255, 176, 92, 0.2)); }
-.clr-code { color: var(--clr-code); filter: drop-shadow(0 0 15px rgba(255, 239, 92, 0.2)); }
-.clr-folder { color: var(--clr-folder); filter: drop-shadow(0 0 15px rgba(92, 120, 255, 0.2)); }
+.clr-video { color: var(--clr-video); filter: drop-shadow(0 0 12px rgba(191, 92, 255, 0.15)); }
+.clr-image { color: var(--clr-image); filter: drop-shadow(0 0 12px rgba(255, 92, 157, 0.15)); }
+.clr-audio { color: var(--clr-audio); filter: drop-shadow(0 0 12px rgba(0, 242, 129, 0.15)); }
+.clr-doc { color: var(--clr-doc); filter: drop-shadow(0 0 12px rgba(92, 192, 255, 0.15)); }
+.clr-archive { color: var(--clr-archive); filter: drop-shadow(0 0 12px rgba(255, 176, 92, 0.15)); }
+.clr-code { color: var(--clr-code); filter: drop-shadow(0 0 12px rgba(255, 239, 92, 0.15)); }
+.clr-folder { color: var(--clr-folder); filter: drop-shadow(0 0 12px rgba(92, 120, 255, 0.15)); }
 .clr-default { color: var(--text-secondary); opacity: 0.8; }
 
 .item-preview {
     width: 100%;
-    height: 120px;
-    border-radius: 12px;
+    height: 50px;
+    border-radius: 8px;
     overflow: hidden;
     background: #000;
     border: 1px solid var(--border);
@@ -473,9 +481,8 @@ body {
 }
 
 .item-card:hover .item-preview img { transform: scale(1.15); }
-
 .item-name {
-    font-size: 0.95rem;
+    font-size: 0.8rem;
     font-weight: 600;
     color: var(--text-primary);
     white-space: nowrap;
@@ -484,15 +491,6 @@ body {
     width: 100%;
     display: block;
 }
-
-.item-card:hover {
-    transform: translateY(-8px);
-    background: rgba(255, 255, 255, 0.04);
-    border-color: var(--accent);
-    box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 20px rgba(92, 120, 255, 0.1);
-}
-
-.item-card:hover .item-preview img { transform: scale(1.15); }
 
 /* --- List View Refined --- */
 
@@ -999,24 +997,34 @@ body {
     .btn span { display: none; }
     .btn i { width: 20px; height: 20px; }
     
-    .explorer-header { padding: 16px 20px; }
-    .breadcrumbs { font-size: 0.75rem; }
-    .breadcrumbs span { padding: 4px 8px; }
+    .explorer-header { padding: 12px 16px; }
+    .breadcrumbs { font-size: 0.7rem; }
+    .breadcrumbs span { padding: 4px 6px; }
 
-    .file-grid { padding: 12px 20px 100px; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); align-content: start; }
-
-    
-    .item-card { 
-        padding: 20px 12px; 
-        border-radius: 20px; 
-        min-height: 160px; 
-        backdrop-filter: none;
-        background: var(--bg-card); /* Simpler background on mobile */
-        animation: fadeIn 0.4s ease both; /* Simpler animation */
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        border: 1px solid var(--border);
-        background-image: none; /* Disable gradient border on mobile for performance */
+    .file-grid { 
+        padding: 8px 12px 100px; 
+        gap: 8px; 
+        grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); 
+        align-content: start; 
     }
+
+    .item-card { 
+        padding: 10px 6px; 
+        border-radius: 12px; 
+        min-height: 90px; 
+        backdrop-filter: none;
+        background: var(--bg-card);
+        animation: fadeIn 0.3s ease both;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        border: 1px solid var(--border);
+        background-image: none;
+        gap: 6px;
+    }
+    
+    .item-icon { font-size: 20px; margin-top: 0; }
+    .item-icon i { width: 24px; height: 24px; stroke-width: 2; }
+    .item-name { font-size: 0.65rem; }
+    .item-preview { height: 45px; border-radius: 6px; }
     
     .item-card .hover-glow { display: none !important; }
     .item-card:hover { transform: none; }
@@ -1044,11 +1052,11 @@ body {
 }
 
 @media (max-width: 480px) {
-    .file-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 12px; padding: 12px; align-content: start; }
-    .item-preview { height: 90px; }
-    .item-icon { font-size: 40px; }
-    .item-icon i { width: 40px; height: 40px; }
-    .item-card { padding: 16px 12px; min-height: 150px; }
+    .file-grid { grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); gap: 8px; padding: 12px; align-content: start; }
+    .item-preview { height: 45px; }
+    .item-icon { font-size: 20px; }
+    .item-icon i { width: 24px; height: 24px; }
+    .item-card { padding: 10px 6px; min-height: 90px; }
     .auth-card { padding: 24px; border-radius: 24px; gap: 20px; }
     
     .list-header, .list-item { grid-template-columns: 1fr 70px; padding: 6px 12px; }

@@ -373,8 +373,8 @@ body {
     width: 48px;
     height: 48px;
     border-radius: 50%;
-    background: var(--glass);
-    border: 1px solid var(--border);
+    background: #1a1a20; /* Solid background */
+    border: 1px solid var(--border-bright);
     color: var(--text-primary);
     display: flex;
     align-items: center;
@@ -385,8 +385,12 @@ body {
 }
 
 .fab-action:hover {
-    background: rgba(255,255,255,0.1);
-    color: var(--accent);
+    background: var(--accent); /* Solid accent color */
+    color: white;
+}
+
+.fab-action:active {
+    background: #4a66ff; /* Solid blue when clicked */
 }
 
 /* Bottom Sheet */

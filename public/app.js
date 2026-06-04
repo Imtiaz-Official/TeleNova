@@ -896,40 +896,85 @@ document.getElementById("new-folder-btn").onclick = async () => {
     });
     loadFiles(state.currentPath);
 };
-document.getElementById("file-upload").onchange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
+// --- Reusable Upload Logic ---
+async function uploadSingleFile(file, targetFolderId = state.currentPath) {
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("folderId", state.currentPath);
+    formData.append("folderId", targetFolderId);
     
-    const startTime = Date.now();
-    const xhr = new XMLHttpRequest();
+    return new Promise((resolve) => {
+        const xhr = new XMLHttpRequest();
+        xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+                const percent = Math.round((event.loaded / event.total) * 100);
+                updateAuthStatus(`UPLOADING_${file.name.toUpperCase()}..._${percent}%`, "PROCESS");
+            }
+        };
+        xhr.onload = () => {
+            if (xhr.status === 200) {
+                updateAuthStatus(`UPLOAD_COMPLETE:_${file.name.toUpperCase()}`, "READY");
+            } else {
+                updateAuthStatus("UPLOAD_FAILED", "ERROR");
+            }
+            resolve();
+        };
+        xhr.onerror = () => {
+            updateAuthStatus("NETWORK_ERROR", "ERROR");
+            resolve();
+        };
+        xhr.open("POST", "/api/files/upload");
+        xhr.send(formData);
+    });
+}
+
+document.getElementById("file-upload").onchange = async (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
     
-    xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable) {
-            const percent = Math.round((event.loaded / event.total) * 100);
-            const elapsed = (Date.now() - startTime) / 1000;
-            const speed = event.loaded / elapsed;
-            const speedText = formatBytes(speed) + "/s";
-            updateAuthStatus(`UPLOADING_${file.name.toUpperCase()}..._${percent}%_(${speedText})`, "PROCESS");
+    for (const file of files) {
+        await uploadSingleFile(file);
+    }
+    e.target.value = '';
+    loadFiles(state.currentPath);
+};
+
+document.getElementById("folder-upload").onchange = async (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+
+    updateAuthStatus("PREPARING_FOLDER_UPLINK...", "PROCESS");
+    const folderCache = {}; // path string -> folderId
+
+    for (const file of files) {
+        const relativePath = file.webkitRelativePath; 
+        const pathSegments = relativePath.split("/");
+        pathSegments.pop(); // remove filename
+
+        let currentParentId = state.currentPath;
+        let currentPathStr = "";
+
+        for (const segment of pathSegments) {
+            currentPathStr += (currentPathStr ? "/" : "") + segment;
+            
+            if (folderCache[currentPathStr]) {
+                currentParentId = folderCache[currentPathStr];
+            } else {
+                const res = await fetch("/api/files/create-folder", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name: segment, parentId: currentParentId })
+                });
+                const data = await res.json();
+                folderCache[currentPathStr] = data.folderId;
+                currentParentId = data.folderId;
+            }
         }
-    };
+        await uploadSingleFile(file, currentParentId);
+    }
     
-    xhr.onload = () => {
-        if (xhr.status === 200) {
-            updateAuthStatus(`UPLOAD_COMPLETE:_${file.name.toUpperCase()}`, "READY");
-            loadFiles(state.currentPath);
-        } else {
-            updateAuthStatus("UPLOAD_FAILED", "ERROR");
-        }
-    };
-    
-    xhr.onerror = () => updateAuthStatus("NETWORK_ERROR_DURING_UPLOAD", "ERROR");
-    
-    xhr.open("POST", "/api/files/upload");
-    xhr.send(formData);
+    updateAuthStatus("FOLDER_UPLOAD_COMPLETE", "READY");
+    e.target.value = '';
+    loadFiles(state.currentPath);
 };
 document.getElementById("logout-btn").onclick = async () => {
     try {

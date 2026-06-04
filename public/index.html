@@ -110,8 +110,10 @@
             <div class="fab-container">
                 <div id="fab-menu" class="fab-menu hidden">
                     <button class="fab-action" id="new-folder-btn" title="New Folder"><i data-lucide="folder-plus"></i></button>
-                    <label for="file-upload" class="fab-action" title="Upload File"><i data-lucide="upload-cloud"></i></label>
-                    <input type="file" id="file-upload" class="hidden">
+                    <label for="folder-upload" class="fab-action" title="Upload Folder"><i data-lucide="folder-up"></i></label>
+                    <input type="file" id="folder-upload" class="hidden" webkitdirectory directory>
+                    <label for="file-upload" class="fab-action" title="Upload Files"><i data-lucide="upload-cloud"></i></label>
+                    <input type="file" id="file-upload" class="hidden" multiple>
                 </div>
                 <button class="fab-main" id="fab-main-btn"><i data-lucide="plus"></i></button>
             </div>

@@ -709,6 +709,7 @@ body {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 1px;
+    padding-top: 16px;
     padding-bottom: 12px;
     margin-bottom: 8px;
 }
@@ -1236,9 +1237,11 @@ body {
     .list-header, .list-item { 
         grid-template-columns: 1fr 80px; 
         padding: 8px 12px; 
- 
         font-size: 0.75rem; 
         animation: fadeIn 0.3s ease both;
+    }
+    .list-header {
+        padding-top: 16px;
     }
     .list-item:hover { transform: none; }
 
@@ -1262,6 +1265,7 @@ body {
     .auth-card { padding: 24px; border-radius: 24px; gap: 20px; }
     
     .list-header, .list-item { grid-template-columns: 1fr 70px; padding: 6px 12px; }
+    .list-header { padding-top: 16px; }
 }
 
 .hidden { display: none !important; }

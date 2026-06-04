@@ -288,25 +288,37 @@ body {
 /* Mobile Aggressive Optimization */
 @media (max-width: 768px) {
     .toolbar {
-        padding: 12px 20px;
+        padding: 8px 20px;
         backdrop-filter: none !important;
         background: #0a0a0f !important;
+        min-height: 56px;
     }
     
     .toolbar-main {
         position: fixed;
-        top: 60px;
+        top: 56px;
         left: 0;
         right: 0;
-        background: #0a0a0f;
-        padding: 20px;
-        border-bottom: 1px solid var(--border);
-        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        z-index: 99;
+        background: #0d0d12;
+        padding: 24px 20px;
+        border-bottom: 2px solid var(--accent);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+        z-index: 110;
+        flex-direction: column;
+        align-items: stretch;
     }
     
     .file-grid {
         padding: 70px 16px 100px;
+    }
+
+    .explorer-view.tools-open::after {
+        content: '';
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.6);
+        z-index: 105;
+        backdrop-filter: blur(4px);
     }
 }
 
@@ -1184,6 +1196,7 @@ body {
     border: 1px solid var(--border);
     cursor: pointer;
     transition: all 0.2s ease;
+    z-index: 120; /* High z-index to stay above tools */
 }
 
 .btn-tools-toggle:hover {

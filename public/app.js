@@ -91,8 +91,9 @@ if (toolsToggleBtn) {
     toolsToggleBtn.onclick = () => {
         const isCollapsed = toolbarTools.classList.toggle("collapsed");
         fileContainer.classList.toggle("tools-expanded", !isCollapsed);
+        explorerView.classList.toggle("tools-open", !isCollapsed);
         
-        // Update Icon (optional but professional)
+        // Update Icon
         const icon = toolsToggleBtn.querySelector("i");
         if (icon) {
             icon.setAttribute("data-lucide", isCollapsed ? "more-horizontal" : "chevron-up");

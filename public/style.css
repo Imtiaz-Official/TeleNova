@@ -216,28 +216,49 @@ body {
 .toolbar {
     min-height: 100px;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 24px 48px;
+    flex-direction: column;
+    padding: 16px 48px;
     background: var(--glass);
     backdrop-filter: blur(24px);
     border-bottom: 1px solid var(--border);
     z-index: 50;
+    gap: 16px;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+    will-change: transform;
+}
+
+.toolbar-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     flex-wrap: wrap;
     gap: 24px;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    overflow: hidden;
 }
 
 .toolbar.collapsed {
-    min-height: 0;
-    height: 0;
-    padding-top: 0;
-    padding-bottom: 0;
-    margin: 0;
-    border-bottom: none;
+    transform: translateY(-100%);
     opacity: 0;
     pointer-events: none;
+    position: absolute;
+    width: 100%;
+}
+
+.explorer-view {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+}
+
+.explorer-header {
+    padding: 12px 48px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.02);
+    display: flex;
+    align-items: center;
+    min-height: 50px;
+    z-index: 40;
 }
 
 .search-bar {
@@ -944,6 +965,7 @@ body {
     flex-direction: column;
     height: 100%;
     overflow: hidden;
+    position: relative;
 }
 
 @media (max-width: 768px) {

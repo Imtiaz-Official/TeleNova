@@ -86,17 +86,30 @@ const toolbar = document.querySelector(".toolbar");
 
 // --- Scroll Handling for Collapsible Toolbar ---
 let lastScrollTop = 0;
+let isToolbarCollapsed = false;
+let scrollTimeout;
+
 fileContainer.addEventListener("scroll", () => {
-    const scrollTop = fileContainer.scrollTop;
-    if (scrollTop > 50 && scrollTop > lastScrollTop) {
-        // Scrolling down
-        toolbar.classList.add("collapsed");
-    } else if (scrollTop < lastScrollTop || scrollTop <= 10) {
-        // Scrolling up or at top
-        toolbar.classList.remove("collapsed");
-    }
-    lastScrollTop = scrollTop;
-});
+    if (scrollTimeout) return;
+    
+    scrollTimeout = setTimeout(() => {
+        const scrollTop = fileContainer.scrollTop;
+        const delta = scrollTop - lastScrollTop;
+
+        if (scrollTop > 100 && delta > 10 && !isToolbarCollapsed) {
+            // Scrolling down significantly
+            toolbar.classList.add("collapsed");
+            isToolbarCollapsed = true;
+        } else if ((delta < -20 || scrollTop <= 10) && isToolbarCollapsed) {
+            // Scrolling up significantly or at top
+            toolbar.classList.remove("collapsed");
+            isToolbarCollapsed = false;
+        }
+        
+        lastScrollTop = scrollTop;
+        scrollTimeout = null;
+    }, 50); // Throttle to 50ms
+}, { passive: true });
 
 // --- Initialization & Session Check ---
 async function checkSession() {

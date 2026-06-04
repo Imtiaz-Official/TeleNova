@@ -214,17 +214,25 @@ body {
 /* --- Toolbar --- */
 
 .toolbar {
-    min-height: 100px;
     display: flex;
     flex-direction: column;
-    padding: 16px 48px;
+    padding: 12px 48px;
     background: var(--glass);
-    backdrop-filter: blur(24px);
+    backdrop-filter: blur(32px);
     border-bottom: 1px solid var(--border);
-    z-index: 50;
-    gap: 16px;
-    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
-    will-change: transform;
+    z-index: 100;
+    gap: 12px;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    position: sticky;
+    top: 0;
+    overflow: hidden;
+    max-height: 200px;
+}
+
+.explorer-header-mini {
+    display: flex;
+    align-items: center;
+    padding-bottom: 4px;
 }
 
 .toolbar-main {
@@ -232,15 +240,18 @@ body {
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
-    gap: 24px;
+    gap: 16px;
 }
 
 .toolbar.collapsed {
-    transform: translateY(-100%);
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-top: 0;
+    border-bottom: none;
     opacity: 0;
     pointer-events: none;
-    position: absolute;
-    width: 100%;
+    transform: translateY(-20px);
 }
 
 .explorer-view {
@@ -251,14 +262,9 @@ body {
     position: relative;
 }
 
+/* Remove old explorer-header styles */
 .explorer-header {
-    padding: 12px 48px;
-    border-bottom: 1px solid var(--border);
-    background: rgba(255, 255, 255, 0.02);
-    display: flex;
-    align-items: center;
-    min-height: 50px;
-    z-index: 40;
+    display: none;
 }
 
 .search-bar {

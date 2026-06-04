@@ -448,7 +448,8 @@ function renderFiles(itemsToRender = state.items) {
     updateStorageStats(filteredItems);
 
     if (state.viewMode === "grid") {
-        fileContainer.className = "file-grid";
+        fileContainer.classList.remove("file-list-view");
+        fileContainer.classList.add("file-grid");
         filteredItems.forEach((item, index) => {
             const card = document.createElement("div");
             card.className = "item-card";
@@ -487,7 +488,8 @@ function renderFiles(itemsToRender = state.items) {
             fileContainer.appendChild(card);
         });
     } else {
-        fileContainer.className = "file-list-view";
+        fileContainer.classList.remove("file-grid");
+        fileContainer.classList.add("file-list-view");
         const header = document.createElement("div");
         header.className = "list-header";
         header.innerHTML = `<div>Item Details</div><div style="text-align: right;">Size</div>`;

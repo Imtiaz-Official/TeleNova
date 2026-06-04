@@ -331,7 +331,7 @@ async function login() {
 async function loadFiles(folderId = "root") {
     state.currentPath = folderId;
     localStorage.setItem("telenova_current_path", folderId);
-    updateAuthStatus(`LOADING_NODE_${folderId.toUpperCase()}...`, "PROCESS");
+    updateAuthStatus("SYNCING_NEURAL_NODES...", "PROCESS");
     try {
         const res = await fetch(`/api/files/list?folderId=${folderId}`);
         if (!res.ok) throw new Error("Server response error");
@@ -480,7 +480,7 @@ function renderFiles(itemsToRender = state.items) {
                     ${iconHtml}
                     <div class="list-info">
                         <span class="list-name">${item.name}</span>
-                        <span class="list-details">ID: ${item.messageId || 'DIR'} &bull; ${displayType}</span>
+                        <span class="list-details">${displayType}</span>
                     </div>
                 </div>
                 <div class="list-meta">

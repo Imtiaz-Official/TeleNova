@@ -307,6 +307,11 @@ body {
     flex: 1;
     align-content: start;
     scroll-behavior: smooth;
+    transition: padding-top 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.file-grid.search-active {
+    padding-top: 150px; /* 64px (top bar) + ~62px (search container) + 24px */
 }
 
 /* Floating Action Button (FAB) */
@@ -678,7 +683,16 @@ body {
 
 /* --- List View Refined --- */
 
-.file-list-view { padding: 88px 48px 120px; overflow-y: auto; flex: 1; }
+.file-list-view { 
+    padding: 88px 48px 120px; 
+    overflow-y: auto; 
+    flex: 1; 
+    transition: padding-top 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.file-list-view.search-active {
+    padding-top: 150px;
+}
 
 .list-header, .list-item {
     display: grid;
@@ -1218,6 +1232,7 @@ body {
     .auth-card { padding: 32px 24px; border-radius: 28px; gap: 20px; width: 92%; backdrop-filter: none; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
 
     .file-list-view { padding: 70px 16px 100px; }
+    .file-list-view.search-active { padding-top: 130px; }
     .list-header, .list-item { 
         grid-template-columns: 1fr 80px; 
         padding: 8px 12px; 
@@ -1239,6 +1254,7 @@ body {
 
 @media (max-width: 480px) {
     .file-grid { grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); gap: 8px; padding: 76px 12px 120px; align-content: start; }
+    .file-list-view { padding: 76px 12px 120px; }
     .item-preview { height: 45px; }
     .item-icon { font-size: 20px; }
     .item-icon i { width: 24px; height: 24px; }

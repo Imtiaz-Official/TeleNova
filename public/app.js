@@ -98,8 +98,9 @@ const fabMenu = document.getElementById("fab-menu");
 // 1. Search Toggle
 if (searchToggleBtn && searchContainer) {
     searchToggleBtn.onclick = () => {
-        searchContainer.classList.toggle("collapsed");
-        if (!searchContainer.classList.contains("collapsed")) {
+        const isCollapsed = searchContainer.classList.toggle("collapsed");
+        fileContainer.classList.toggle("search-active", !isCollapsed);
+        if (!isCollapsed) {
             setTimeout(() => document.querySelector(".search-bar").focus(), 100);
         }
     };

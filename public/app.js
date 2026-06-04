@@ -82,25 +82,62 @@ const recentContainer = document.getElementById("recent-container");
 
 const navHome = document.getElementById("nav-home");
 const navFiles = document.getElementById("nav-files");
-const toolbar = document.querySelector(".toolbar");
-const toolbarTools = document.getElementById("toolbar-tools");
+const searchToggleBtn = document.getElementById("search-toggle-btn");
+const searchContainer = document.getElementById("search-container");
 const toolsToggleBtn = document.getElementById("tools-toggle-btn");
+const bottomSheet = document.getElementById("bottom-sheet");
+const bottomSheetOverlay = document.getElementById("bottom-sheet-overlay");
+const closeSheetBtn = document.getElementById("close-sheet-btn");
+const fabMainBtn = document.getElementById("fab-main-btn");
+const fabContainer = document.querySelector(".fab-container");
+const fabMenu = document.getElementById("fab-menu");
 
-// --- Tools Toggle Logic ---
-if (toolsToggleBtn) {
-    toolsToggleBtn.onclick = () => {
-        const isCollapsed = toolbarTools.classList.toggle("collapsed");
-        fileContainer.classList.toggle("tools-expanded", !isCollapsed);
-        explorerView.classList.toggle("tools-open", !isCollapsed);
-        
-        // Update Icon
-        const icon = toolsToggleBtn.querySelector("i");
-        if (icon) {
-            icon.setAttribute("data-lucide", isCollapsed ? "more-horizontal" : "chevron-up");
-            if (window.lucide) lucide.createIcons();
+// --- Enterprise UI Logic ---
+
+// 1. Search Toggle
+if (searchToggleBtn && searchContainer) {
+    searchToggleBtn.onclick = () => {
+        searchContainer.classList.toggle("collapsed");
+        if (!searchContainer.classList.contains("collapsed")) {
+            setTimeout(() => document.querySelector(".search-bar").focus(), 100);
         }
     };
 }
+
+// 2. Bottom Sheet Toggle
+function toggleBottomSheet(show) {
+    if (show) {
+        bottomSheet.classList.remove("hidden");
+        bottomSheetOverlay.classList.remove("hidden");
+    } else {
+        bottomSheet.classList.add("hidden");
+        bottomSheetOverlay.classList.add("hidden");
+    }
+}
+
+if (toolsToggleBtn) toolsToggleBtn.onclick = () => toggleBottomSheet(true);
+if (closeSheetBtn) closeSheetBtn.onclick = () => toggleBottomSheet(false);
+if (bottomSheetOverlay) bottomSheetOverlay.onclick = () => toggleBottomSheet(false);
+
+// 3. Floating Action Button (FAB)
+if (fabMainBtn) {
+    fabMainBtn.onclick = () => {
+        const isActive = fabContainer.classList.toggle("active");
+        if (isActive) {
+            fabMenu.classList.remove("hidden");
+        } else {
+            fabMenu.classList.add("hidden");
+        }
+    };
+}
+
+// Close FAB menu when clicking outside
+document.addEventListener("click", (e) => {
+    if (fabContainer && fabContainer.classList.contains("active") && !fabContainer.contains(e.target)) {
+        fabContainer.classList.remove("active");
+        fabMenu.classList.add("hidden");
+    }
+});
 
 // --- Initialization & Session Check ---
 async function checkSession() {

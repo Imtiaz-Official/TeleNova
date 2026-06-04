@@ -211,54 +211,83 @@ body {
 
 .nav-item i { width: 20px; height: 20px; }
 
-/* --- Toolbar --- */
+/* --- Enterprise UI Components --- */
 
-.toolbar {
+/* Top App Bar */
+.top-app-bar {
     display: flex;
-    flex-direction: column;
-    padding: 12px 48px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 48px;
     background: rgba(10, 10, 15, 0.95);
-    backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border);
     z-index: 100;
-    gap: 0;
     position: absolute;
     top: 0; left: 0; right: 0;
-    min-height: 60px;
+    height: 64px;
     box-sizing: border-box;
 }
 
-.explorer-header-mini {
+.top-bar-actions {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    height: 48px;
-    z-index: 2;
+    gap: 8px;
 }
 
-.toolbar-main {
+.btn-icon {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 8px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 16px;
-    overflow: hidden;
-    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), 
-                opacity 0.2s ease,
-                visibility 0.25s;
-    opacity: 1;
-    visibility: visible;
-    padding: 12px 0;
-    transform: translateY(0);
-    will-change: transform, opacity;
+    justify-content: center;
 }
 
-.toolbar-main.collapsed {
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-10px);
+.btn-icon:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+}
+
+/* Search Container */
+.search-container {
     position: absolute;
+    top: 64px;
+    left: 0;
+    right: 0;
+    padding: 16px 48px;
+    background: rgba(10, 10, 15, 0.98);
+    border-bottom: 1px solid var(--border);
+    z-index: 90;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s;
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.search-container.collapsed {
+    transform: translateY(-100%);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.search-bar {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 12px 24px;
+    color: white;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.search-bar:focus {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px rgba(92, 120, 255, 0.1);
+    outline: none;
 }
 
 .explorer-view {
@@ -267,11 +296,10 @@ body {
     height: 100%;
     overflow: hidden;
     position: relative;
-    padding-top: 0; /* Reset */
 }
 
 .file-grid {
-    padding: 140px 48px 120px;
+    padding: 88px 48px 120px; /* 64px (top bar) + 24px spacing */
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 20px;
@@ -281,71 +309,169 @@ body {
     scroll-behavior: smooth;
 }
 
-.file-grid.tools-expanded {
-    /* No transition on padding, let it be instant or static if possible */
+/* Floating Action Button (FAB) */
+.fab-container {
+    position: absolute;
+    bottom: 32px;
+    right: 48px;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 16px;
 }
 
-/* Mobile Aggressive Optimization */
-@media (max-width: 768px) {
-    .toolbar {
-        padding: 8px 20px;
-        backdrop-filter: none !important;
-        background: #0a0a0f !important;
-        min-height: 56px;
-    }
-    
-    .toolbar-main {
-        position: fixed;
-        top: 56px;
-        left: 0;
-        right: 0;
-        background: #0d0d12;
-        padding: 24px 20px;
-        border-bottom: 2px solid var(--accent);
-        box-shadow: 0 20px 40px rgba(0,0,0,0.8);
-        z-index: 110;
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .file-grid {
-        padding: 70px 16px 100px;
-    }
-
-    .explorer-view.tools-open::after {
-        content: '';
-        position: fixed;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(0, 0, 0, 0.4); /* Just a subtle dim, no blur */
-        z-index: 90; /* Lower than toolbar */
-        pointer-events: none; /* Allow clicking through if needed, though toggle handles it */
-    }
-}
-
-.search-bar {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 16px 32px;
-    width: 380px;
+.fab-main {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--accent);
     color: white;
+    border: none;
+    box-shadow: 0 8px 24px rgba(92, 120, 255, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s;
+}
+
+.fab-main i {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fab-main:hover {
+    background: #738aff;
+    transform: scale(1.05);
+}
+
+.fab-container.active .fab-main i {
+    transform: rotate(45deg);
+}
+
+.fab-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: opacity 0.2s, transform 0.2s;
+    transform-origin: bottom center;
+}
+
+.fab-menu.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(20px) scale(0.9);
+    display: flex !important;
+}
+
+.fab-action {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--glass);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    transition: all 0.2s;
+}
+
+.fab-action:hover {
+    background: rgba(255,255,255,0.1);
+    color: var(--accent);
+}
+
+/* Bottom Sheet */
+.bottom-sheet-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 250;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.bottom-sheet-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+    display: block !important;
+}
+
+.bottom-sheet {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #121216; /* Solid dark for performance */
+    border-top: 1px solid var(--border);
+    border-radius: 24px 24px 0 0;
+    z-index: 300;
+    padding: 24px;
+    transform: translateY(0);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+}
+
+.bottom-sheet.hidden {
+    transform: translateY(100%);
+    display: block !important;
+}
+
+.sheet-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    color: white;
+}
+
+.sheet-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.sheet-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sheet-action {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border: none;
+    border-radius: 16px;
+    color: var(--text-primary);
     font-size: 1rem;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+    cursor: pointer;
+    transition: background 0.2s;
+    text-align: left;
+    width: 100%;
 }
 
-.search-bar:focus {
-    width: 440px;
+.sheet-action i {
+    color: var(--text-secondary);
+}
+
+.sheet-action:hover {
     background: rgba(255, 255, 255, 0.06);
-    border-color: var(--accent);
-    box-shadow: 0 0 40px rgba(92, 120, 255, 0.15), inset 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.actions { 
-    display: flex; 
-    gap: 12px; 
-    flex-wrap: wrap;
-    justify-content: flex-end;
+.sheet-action:hover i {
+    color: var(--accent);
+}
+
+.sheet-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 8px 0;
 }
 
 .breadcrumbs {

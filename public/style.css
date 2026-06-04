@@ -241,15 +241,6 @@ body {
     background: inherit;
 }
 
-.btn-tools-toggle {
-    padding: 8px 16px;
-    border-radius: 12px;
-    font-size: 0.85rem;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
 .toolbar-main {
     display: flex;
     align-items: center;
@@ -1108,64 +1099,77 @@ body {
 .context-menu {
     position: fixed;
     z-index: 5000;
-    background: var(--glass);
-    backdrop-filter: blur(24px);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    min-width: 220px;
-    max-height: 80vh;
-    overflow-y: auto;
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    background: rgba(15, 15, 20, 0.9);
+    backdrop-filter: blur(28px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 18px;
+    min-width: 240px;
+    box-shadow: 
+        0 24px 48px rgba(0, 0, 0, 0.6),
+        0 0 0 1px rgba(255, 255, 255, 0.05);
     padding: 8px;
-    animation: fadeInScale 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: menuAppear 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     transform-origin: top left;
 }
 
-/* Custom Scrollbar for Context Menu */
-.context-menu::-webkit-scrollbar {
-    width: 4px;
-}
-.context-menu::-webkit-scrollbar-thumb {
-    background: var(--border);
-    border-radius: 10px;
+@keyframes menuAppear {
+    from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 .menu-item {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 12px 16px;
+    padding: 10px 14px;
     color: var(--text-secondary);
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     font-weight: 500;
-    border-radius: 10px;
+    border-radius: 12px;
     cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.2s ease;
 }
 
 .menu-item i {
     width: 18px;
     height: 18px;
     opacity: 0.7;
-    transition: opacity 0.2s;
+    transition: transform 0.2s ease;
 }
 
 .menu-item:hover {
     background: rgba(255, 255, 255, 0.06);
-    color: var(--text-primary);
-    transform: translateX(4px);
+    color: white;
 }
 
 .menu-item:hover i {
     opacity: 1;
-    color: var(--accent);
+    transform: translateX(2px);
 }
 
 .menu-item.delete:hover {
-    background: rgba(255, 82, 82, 0.1);
-    color: var(--danger);
+    background: rgba(255, 82, 82, 0.15);
+    color: #ff5252;
 }
 
-.menu-item.delete:hover i {
-    color: var(--danger);
+.menu-item.delete i { color: #ff5252; }
+
+/* --- Tools Toggle Polishing --- */
+.btn-tools-toggle {
+    padding: 8px 16px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-tools-toggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent);
+    transform: translateY(-1px);
 }

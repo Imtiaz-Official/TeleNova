@@ -216,23 +216,25 @@ body {
 .toolbar {
     display: flex;
     flex-direction: column;
-    padding: 12px 48px;
+    padding: 16px 48px;
     background: var(--glass);
-    backdrop-filter: blur(32px);
+    backdrop-filter: blur(40px);
     border-bottom: 1px solid var(--border);
     z-index: 100;
     gap: 12px;
-    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    position: sticky;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+    position: absolute;
     top: 0;
-    overflow: hidden;
-    max-height: 200px;
+    left: 0;
+    right: 0;
+    min-height: 120px;
+    box-sizing: border-box;
+    will-change: transform;
 }
 
 .explorer-header-mini {
     display: flex;
     align-items: center;
-    padding-bottom: 4px;
 }
 
 .toolbar-main {
@@ -244,14 +246,9 @@ body {
 }
 
 .toolbar.collapsed {
-    max-height: 0;
-    padding-top: 0;
-    padding-bottom: 0;
-    margin-top: 0;
-    border-bottom: none;
+    transform: translateY(-100%);
     opacity: 0;
     pointer-events: none;
-    transform: translateY(-20px);
 }
 
 .explorer-view {
@@ -260,11 +257,18 @@ body {
     height: 100%;
     overflow: hidden;
     position: relative;
+    padding-top: 0; /* Reset */
 }
 
-/* Remove old explorer-header styles */
-.explorer-header {
-    display: none;
+.file-grid {
+    padding: 140px 48px 120px; /* 120px for toolbar + 20px buffer */
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 20px;
+    overflow-y: auto;
+    flex: 1;
+    align-content: start;
+    scroll-behavior: smooth;
 }
 
 .search-bar {
@@ -293,18 +297,6 @@ body {
     justify-content: flex-end;
 }
 
-/* --- Breadcrumbs & View --- */
-
-.explorer-header { 
-    padding: 24px 48px; 
-    background: rgba(4, 4, 6, 0.4);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
 .breadcrumbs {
     display: flex;
     align-items: center;
@@ -331,18 +323,6 @@ body {
     color: var(--accent); 
     background: rgba(92, 120, 255, 0.1);
     cursor: pointer; 
-}
-
-/* --- File Grid --- */
-
-.file-grid {
-    padding: 24px 48px 120px;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 20px;
-    overflow-y: auto;
-    flex: 1;
-    align-content: start;
 }
 
 /* --- Modal System --- */

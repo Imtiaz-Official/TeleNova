@@ -678,7 +678,7 @@ body {
 
 /* --- List View Refined --- */
 
-.file-list-view { padding: 24px 48px 120px; overflow-y: auto; flex: 1; }
+.file-list-view { padding: 88px 48px 120px; overflow-y: auto; flex: 1; }
 
 .list-header, .list-item {
     display: grid;
@@ -1216,11 +1216,12 @@ body {
     
     .auth-overlay { backdrop-filter: none; background: #08080a; }
     .auth-card { padding: 32px 24px; border-radius: 28px; gap: 20px; width: 92%; backdrop-filter: none; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
-    
-    .file-list-view { padding: 12px 20px 100px; }
+
+    .file-list-view { padding: 70px 16px 100px; }
     .list-header, .list-item { 
         grid-template-columns: 1fr 80px; 
         padding: 8px 12px; 
+ 
         font-size: 0.75rem; 
         animation: fadeIn 0.3s ease both;
     }
@@ -1237,7 +1238,7 @@ body {
 }
 
 @media (max-width: 480px) {
-    .file-grid { grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); gap: 8px; padding: 12px; align-content: start; }
+    .file-grid { grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); gap: 8px; padding: 76px 12px 120px; align-content: start; }
     .item-preview { height: 45px; }
     .item-icon { font-size: 20px; }
     .item-icon i { width: 24px; height: 24px; }

@@ -216,25 +216,35 @@ body {
 .toolbar {
     display: flex;
     flex-direction: column;
-    padding: 16px 48px;
+    padding: 12px 48px;
     background: var(--glass);
     backdrop-filter: blur(40px);
     border-bottom: 1px solid var(--border);
     z-index: 100;
-    gap: 12px;
-    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+    gap: 8px;
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    min-height: 120px;
+    min-height: 60px;
     box-sizing: border-box;
-    will-change: transform;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .explorer-header-mini {
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.btn-tools-toggle {
+    padding: 8px 16px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .toolbar-main {
@@ -243,12 +253,19 @@ body {
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 16px;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    max-height: 500px;
+    opacity: 1;
+    padding-top: 8px;
 }
 
-.toolbar.collapsed {
-    transform: translateY(-100%);
+.toolbar-main.collapsed {
+    max-height: 0;
     opacity: 0;
+    padding-top: 0;
     pointer-events: none;
+    margin-top: -8px;
 }
 
 .explorer-view {
@@ -261,7 +278,7 @@ body {
 }
 
 .file-grid {
-    padding: 140px 48px 120px; /* 120px for toolbar + 20px buffer */
+    padding: 100px 48px 120px; /* Base padding for mini header */
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 20px;
@@ -269,6 +286,11 @@ body {
     flex: 1;
     align-content: start;
     scroll-behavior: smooth;
+    transition: padding-top 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.file-grid.tools-expanded {
+    padding-top: 180px; /* Increased padding when tools are visible */
 }
 
 .search-bar {

@@ -83,33 +83,23 @@ const recentContainer = document.getElementById("recent-container");
 const navHome = document.getElementById("nav-home");
 const navFiles = document.getElementById("nav-files");
 const toolbar = document.querySelector(".toolbar");
+const toolbarTools = document.getElementById("toolbar-tools");
+const toolsToggleBtn = document.getElementById("tools-toggle-btn");
 
-// --- Scroll Handling for Collapsible Toolbar ---
-let lastScrollTop = 0;
-let isToolbarCollapsed = false;
-let scrollTimeout;
-
-fileContainer.addEventListener("scroll", () => {
-    if (scrollTimeout) return;
-    
-    scrollTimeout = setTimeout(() => {
-        const scrollTop = fileContainer.scrollTop;
-        const delta = scrollTop - lastScrollTop;
-
-        if (scrollTop > 100 && delta > 10 && !isToolbarCollapsed) {
-            // Scrolling down significantly
-            toolbar.classList.add("collapsed");
-            isToolbarCollapsed = true;
-        } else if ((delta < -20 || scrollTop <= 10) && isToolbarCollapsed) {
-            // Scrolling up significantly or at top
-            toolbar.classList.remove("collapsed");
-            isToolbarCollapsed = false;
-        }
+// --- Tools Toggle Logic ---
+if (toolsToggleBtn) {
+    toolsToggleBtn.onclick = () => {
+        const isCollapsed = toolbarTools.classList.toggle("collapsed");
+        fileContainer.classList.toggle("tools-expanded", !isCollapsed);
         
-        lastScrollTop = scrollTop;
-        scrollTimeout = null;
-    }, 50); // Throttle to 50ms
-}, { passive: true });
+        // Update Icon (optional but professional)
+        const icon = toolsToggleBtn.querySelector("i");
+        if (icon) {
+            icon.setAttribute("data-lucide", isCollapsed ? "more-horizontal" : "chevron-up");
+            if (window.lucide) lucide.createIcons();
+        }
+    };
+}
 
 // --- Initialization & Session Check ---
 async function checkSession() {
